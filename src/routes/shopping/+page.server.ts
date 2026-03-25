@@ -5,7 +5,7 @@ import {
 	recipes, recipeIngredients, ingredients, aisleCategories, pantryItems,
 	ingredientVariants, recipeIngredientVariants
 } from '$lib/server/db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, or, like } from 'drizzle-orm';
 import { generateId } from '$lib/utils/helpers';
 import { aggregateIngredients } from '$lib/utils/quantities';
 import type { Actions, PageServerLoad } from './$types';
@@ -212,6 +212,27 @@ async function regenerateListItems(listId: string) {
 			addedManually: false
 		});
 	}
+
+	// Merge manual items that overlap with recipe-derived items
+	const manualWithIngredient = existingManual.filter(m => m.ingredientId);
+	for (const manual of manualWithIngredient) {
+		const recipeItem = await db.select().from(shoppingListItems)
+			.where(and(
+				eq(shoppingListItems.shoppingListId, listId),
+				eq(shoppingListItems.ingredientId, manual.ingredientId!),
+				eq(shoppingListItems.addedManually, false)
+			))
+			.limit(1);
+
+		if (recipeItem.length > 0) {
+			// Add manual quantity to recipe item, then remove the manual row
+			const combined = (recipeItem[0].quantity || 0) + (manual.quantity || 0);
+			await db.update(shoppingListItems)
+				.set({ quantity: combined > 0 ? combined : recipeItem[0].quantity })
+				.where(eq(shoppingListItems.id, recipeItem[0].id));
+			await db.delete(shoppingListItems).where(eq(shoppingListItems.id, manual.id));
+		}
+	}
 }
 
 export const actions: Actions = {
@@ -223,23 +244,83 @@ export const actions: Actions = {
 		await db.update(shoppingListItems).set({ isChecked: !currentState }).where(eq(shoppingListItems.id, itemId));
 	},
 
+	searchIngredients: async ({ request, locals }) => {
+		if (!locals.user) redirect(302, '/login');
+		const data = await request.formData();
+		const q = (data.get('q') as string)?.trim();
+		if (!q || q.length < 2) return { results: [] };
+
+		const pattern = `%${q}%`;
+		const results = await db
+			.select({
+				id: ingredients.id,
+				name: ingredients.name,
+				nameHe: ingredients.nameHe,
+				aisleCategoryId: ingredients.aisleCategoryId,
+				defaultUnit: ingredients.defaultUnit
+			})
+			.from(ingredients)
+			.where(or(like(ingredients.name, pattern), like(ingredients.nameHe, pattern)))
+			.limit(8);
+
+		return { results };
+	},
+
 	addCustomItem: async ({ request, locals }) => {
 		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const name = (data.get('name') as string)?.trim();
-		if (!name) return fail(400);
+		const ingredientId = (data.get('ingredientId') as string)?.trim() || null;
+		const quantityStr = data.get('quantity') as string;
+		const unit = (data.get('unit') as string)?.trim() || null;
+		const quantity = quantityStr ? parseFloat(quantityStr) : null;
+
+		if (!name && !ingredientId) return fail(400);
 
 		const activeList = await db.select().from(shoppingLists).where(eq(shoppingLists.isActive, true)).limit(1);
 		if (activeList.length === 0) return fail(400);
+		const listId = activeList[0].id;
 
-		await db.insert(shoppingListItems).values({
-			id: generateId(),
-			shoppingListId: activeList[0].id,
-			customName: name,
-			isChecked: false,
-			aisleCategoryId: 'other',
-			addedManually: true
-		});
+		if (ingredientId) {
+			// Check if this ingredient already exists on the list
+			const existing = await db.select().from(shoppingListItems)
+				.where(and(
+					eq(shoppingListItems.shoppingListId, listId),
+					eq(shoppingListItems.ingredientId, ingredientId)
+				))
+				.limit(1);
+
+			if (existing.length > 0 && quantity) {
+				// Merge: add quantity to existing item
+				const currentQty = existing[0].quantity || 0;
+				await db.update(shoppingListItems)
+					.set({ quantity: currentQty + quantity, unit: unit || existing[0].unit })
+					.where(eq(shoppingListItems.id, existing[0].id));
+			} else if (existing.length === 0) {
+				// New canonical item
+				const ing = await db.select().from(ingredients).where(eq(ingredients.id, ingredientId)).limit(1);
+				await db.insert(shoppingListItems).values({
+					id: generateId(),
+					shoppingListId: listId,
+					ingredientId,
+					quantity,
+					unit: unit || ing[0]?.defaultUnit,
+					isChecked: false,
+					aisleCategoryId: ing[0]?.aisleCategoryId || 'other',
+					addedManually: true
+				});
+			}
+		} else {
+			// Free text custom item
+			await db.insert(shoppingListItems).values({
+				id: generateId(),
+				shoppingListId: listId,
+				customName: name,
+				isChecked: false,
+				aisleCategoryId: 'other',
+				addedManually: true
+			});
+		}
 	},
 
 	removeRecipe: async ({ request, locals }) => {
@@ -272,6 +353,19 @@ export const actions: Actions = {
 		if (!itemId || !variantId) return fail(400);
 		await db.update(shoppingListItems)
 			.set({ chosenVariantId: variantId })
+			.where(eq(shoppingListItems.id, itemId));
+	},
+
+	updateQuantity: async ({ request, locals }) => {
+		if (!locals.user) redirect(302, '/login');
+		const data = await request.formData();
+		const itemId = data.get('itemId') as string;
+		const quantityStr = data.get('quantity') as string;
+		const unit = (data.get('unit') as string)?.trim() || null;
+		if (!itemId) return fail(400);
+		const quantity = quantityStr ? parseFloat(quantityStr) : null;
+		await db.update(shoppingListItems)
+			.set({ quantity, ...(unit ? { unit } : {}) })
 			.where(eq(shoppingListItems.id, itemId));
 	},
 
