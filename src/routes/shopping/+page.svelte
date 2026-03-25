@@ -248,6 +248,14 @@
 												{/if}
 											</span>
 										{/if}
+
+										<!-- Delete item -->
+										<form method="POST" action="?/deleteItem" use:enhance class="shrink-0">
+											<input type="hidden" name="itemId" value={item.id} />
+											<button class="p-1 text-text-muted hover:text-danger transition-colors">
+												<X size={14} />
+											</button>
+										</form>
 									</div>
 
 									<!-- Variant selector for items with available variants but no chosen variant -->

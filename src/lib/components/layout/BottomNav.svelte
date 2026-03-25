@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { BookOpen, ShoppingCart, Refrigerator, Plus } from 'lucide-svelte';
+	import { BookOpen, ShoppingCart, Refrigerator, Egg } from 'lucide-svelte';
 
 	const links = [
 		{ href: '/recipes', label: 'מתכונים', icon: BookOpen },
 		{ href: '/shopping', label: 'קניות', icon: ShoppingCart },
 		{ href: '/pantry', label: 'מלאי', icon: Refrigerator },
-		{ href: '/recipes/import', label: 'ייבוא', icon: Plus }
+		{ href: '/ingredients', label: 'מצרכים', icon: Egg }
 	];
 </script>
 

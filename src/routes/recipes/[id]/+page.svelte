@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Heart, Clock, ExternalLink, Trash2, ShoppingCart, ArrowRight, Pencil, ChevronDown } from 'lucide-svelte';
+	import { Heart, Clock, ExternalLink, Trash2, ShoppingCart, ArrowRight, Pencil, ChevronDown, Plus, Check } from 'lucide-svelte';
 	import { formatTime } from '$lib/utils/helpers';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
+
+	// Track which ingredients were just added to shopping list (for visual feedback)
+	let addedItems = $state<Record<string, boolean>>({});
 
 	const categoryLabels: Record<string, string> = {
 		main: 'מנה עיקרית', side: 'תוספת', soup: 'מרק', salad: 'סלט',
@@ -119,9 +122,9 @@
 		<h2 class="mb-3 text-lg font-bold">מצרכים</h2>
 		<ul class="space-y-2">
 			{#each data.ingredients as ing}
-				<li class="flex items-baseline gap-2 text-sm">
-					<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-primary mt-1.5"></span>
-					<span class="flex flex-wrap items-baseline gap-1">
+				<li class="flex items-center gap-2 text-sm">
+					<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-primary"></span>
+					<span class="flex flex-1 flex-wrap items-baseline gap-1">
 						{#if ing.quantity}
 							<strong>{formatQuantity(ing.quantity)}</strong>
 						{/if}
@@ -150,6 +153,35 @@
 							<span class="text-text-muted">(אופציונלי)</span>
 						{/if}
 					</span>
+					{#if ing.ingredientId}
+						<form
+							method="POST"
+							action="?/addToShoppingList"
+							use:enhance={() => {
+								return async ({ result, update }) => {
+									if (result.type === 'success') {
+										addedItems[ing.id] = true;
+										setTimeout(() => { addedItems[ing.id] = false; }, 1500);
+									}
+									await update({ reset: false });
+								};
+							}}
+							class="shrink-0"
+						>
+							<input type="hidden" name="ingredientId" value={ing.ingredientId} />
+							<input type="hidden" name="quantity" value={ing.quantity ? ing.quantity * servingsMultiplier : ''} />
+							<input type="hidden" name="unit" value={ing.unit || ''} />
+							<input type="hidden" name="aisleCategoryId" value={ing.aisleCategoryId || ''} />
+							<input type="hidden" name="variantId" value={selectedVariants[ing.id] || ''} />
+							<button class="flex h-6 w-6 items-center justify-center rounded-full transition-colors {addedItems[ing.id] ? 'bg-accent text-white' : 'text-text-muted hover:bg-primary/10 hover:text-primary'}">
+								{#if addedItems[ing.id]}
+									<Check size={14} />
+								{:else}
+									<Plus size={14} />
+								{/if}
+							</button>
+						</form>
+					{/if}
 				</li>
 			{/each}
 		</ul>
@@ -174,7 +206,7 @@
 	<div class="mt-8 flex gap-3 border-t border-border pt-4">
 		<a href="/shopping?add={data.recipe.id}" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 font-medium text-white transition hover:bg-accent/90">
 			<ShoppingCart size={16} />
-			הוסף לרשימת קניות
+			הוסף הכל לרשימה
 		</a>
 		<a href="/recipes/{data.recipe.id}/edit" class="rounded-lg border border-border px-4 py-2.5 text-sm text-text-muted transition hover:bg-surface-warm">
 			<Pencil size={16} />

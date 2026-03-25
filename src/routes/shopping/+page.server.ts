@@ -369,6 +369,14 @@ export const actions: Actions = {
 			.where(eq(shoppingListItems.id, itemId));
 	},
 
+	deleteItem: async ({ request, locals }) => {
+		if (!locals.user) redirect(302, '/login');
+		const data = await request.formData();
+		const itemId = data.get('itemId') as string;
+		if (!itemId) return fail(400);
+		await db.delete(shoppingListItems).where(eq(shoppingListItems.id, itemId));
+	},
+
 	clearAll: async ({ locals }) => {
 		if (!locals.user) redirect(302, '/login');
 		const activeList = await db.select().from(shoppingLists).where(eq(shoppingLists.isActive, true)).limit(1);

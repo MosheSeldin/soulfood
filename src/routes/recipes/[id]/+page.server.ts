@@ -3,6 +3,7 @@ import { db } from '$lib/server/db';
 import { recipes, recipeIngredients, ingredients } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { getVariantsForRecipeIngredients } from '$lib/server/ingredients/variants';
+import { addIngredientToShoppingList } from '$lib/server/shopping';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -14,6 +15,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const recipeIngs = await db
 		.select({
 			id: recipeIngredients.id,
+			ingredientId: recipeIngredients.ingredientId,
 			quantity: recipeIngredients.quantity,
 			unit: recipeIngredients.unit,
 			originalText: recipeIngredients.originalText,
@@ -21,7 +23,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			isOptional: recipeIngredients.isOptional,
 			sortOrder: recipeIngredients.sortOrder,
 			ingredientName: ingredients.name,
-			ingredientNameHe: ingredients.nameHe
+			ingredientNameHe: ingredients.nameHe,
+			aisleCategoryId: ingredients.aisleCategoryId
 		})
 		.from(recipeIngredients)
 		.leftJoin(ingredients, eq(recipeIngredients.ingredientId, ingredients.id))
@@ -52,6 +55,29 @@ export const actions: Actions = {
 			.update(recipes)
 			.set({ isFavorite: !recipe[0].isFavorite })
 			.where(eq(recipes.id, params.id));
+	},
+
+	addToShoppingList: async ({ request, locals }) => {
+		if (!locals.user) redirect(302, '/login');
+		const data = await request.formData();
+		const ingredientId = data.get('ingredientId') as string;
+		if (!ingredientId) return fail(400);
+
+		const quantityStr = data.get('quantity') as string;
+		const quantity = quantityStr ? parseFloat(quantityStr) : null;
+		const unit = (data.get('unit') as string)?.trim() || null;
+		const aisleCategoryId = (data.get('aisleCategoryId') as string)?.trim() || null;
+		const variantId = (data.get('variantId') as string)?.trim() || null;
+
+		await addIngredientToShoppingList({
+			ingredientId,
+			quantity,
+			unit,
+			aisleCategoryId,
+			chosenVariantId: variantId
+		});
+
+		return { addedIngredientId: ingredientId };
 	},
 
 	delete: async ({ params, locals }) => {
