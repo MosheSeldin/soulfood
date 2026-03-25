@@ -2,7 +2,8 @@ import { redirect, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import {
 	shoppingLists, shoppingListItems, shoppingListRecipes,
-	recipes, recipeIngredients, ingredients, aisleCategories, pantryItems
+	recipes, recipeIngredients, ingredients, aisleCategories, pantryItems,
+	ingredientVariants, recipeIngredientVariants
 } from '$lib/server/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { generateId } from '$lib/utils/helpers';
@@ -39,7 +40,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		}
 	}
 
-	// Load list items
+	// Load list items with chosen variant info
 	const items = await db
 		.select({
 			id: shoppingListItems.id,
@@ -51,16 +52,46 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			aisleCategoryId: shoppingListItems.aisleCategoryId,
 			sourceRecipes: shoppingListItems.sourceRecipes,
 			addedManually: shoppingListItems.addedManually,
+			chosenVariantId: shoppingListItems.chosenVariantId,
 			ingredientName: ingredients.name,
 			ingredientNameHe: ingredients.nameHe,
 			aisleName: aisleCategories.nameHe,
 			aisleSortOrder: aisleCategories.sortOrder,
-			aisleIcon: aisleCategories.icon
+			aisleIcon: aisleCategories.icon,
+			variantName: ingredientVariants.name,
+			variantNameHe: ingredientVariants.nameHe
 		})
 		.from(shoppingListItems)
 		.leftJoin(ingredients, eq(shoppingListItems.ingredientId, ingredients.id))
 		.leftJoin(aisleCategories, eq(shoppingListItems.aisleCategoryId, aisleCategories.id))
+		.leftJoin(ingredientVariants, eq(shoppingListItems.chosenVariantId, ingredientVariants.id))
 		.where(eq(shoppingListItems.shoppingListId, listId));
+
+	// For items with ingredients that have variants, load available variants
+	const ingredientIds = [...new Set(items.filter(i => i.ingredientId).map(i => i.ingredientId!))];
+	let availableVariants: Record<string, Array<{ id: string; name: string; nameHe: string | null }>> = {};
+	if (ingredientIds.length > 0) {
+		const allVariants = await db
+			.select({
+				id: ingredientVariants.id,
+				ingredientId: ingredientVariants.ingredientId,
+				name: ingredientVariants.name,
+				nameHe: ingredientVariants.nameHe
+			})
+			.from(ingredientVariants)
+			.where(inArray(ingredientVariants.ingredientId, ingredientIds));
+
+		for (const v of allVariants) {
+			if (!availableVariants[v.ingredientId]) availableVariants[v.ingredientId] = [];
+			availableVariants[v.ingredientId].push({ id: v.id, name: v.name, nameHe: v.nameHe });
+		}
+	}
+
+	// Enrich items with available variants
+	const enrichedItems = items.map(item => ({
+		...item,
+		availableVariants: item.ingredientId ? (availableVariants[item.ingredientId] || []) : []
+	}));
 
 	// Load recipes on this list
 	const listRecipes = await db
@@ -70,8 +101,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.where(eq(shoppingListRecipes.shoppingListId, listId));
 
 	// Group items by aisle
-	const aisleGroups = new Map<string, { name: string; icon: string | null; sortOrder: number; items: typeof items }>();
-	for (const item of items) {
+	const aisleGroups = new Map<string, { name: string; icon: string | null; sortOrder: number; items: typeof enrichedItems }>();
+	for (const item of enrichedItems) {
 		const key = item.aisleCategoryId || 'other';
 		if (!aisleGroups.has(key)) {
 			aisleGroups.set(key, {
@@ -231,6 +262,17 @@ export const actions: Actions = {
 		await db.delete(shoppingListItems).where(
 			and(eq(shoppingListItems.shoppingListId, activeList[0].id), eq(shoppingListItems.isChecked, true))
 		);
+	},
+
+	chooseVariant: async ({ request, locals }) => {
+		if (!locals.user) redirect(302, '/login');
+		const data = await request.formData();
+		const itemId = data.get('itemId') as string;
+		const variantId = data.get('variantId') as string;
+		if (!itemId || !variantId) return fail(400);
+		await db.update(shoppingListItems)
+			.set({ chosenVariantId: variantId })
+			.where(eq(shoppingListItems.id, itemId));
 	},
 
 	clearAll: async ({ locals }) => {

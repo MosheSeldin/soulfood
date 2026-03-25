@@ -2,6 +2,7 @@ import { redirect, error, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { recipes, recipeIngredients, ingredients } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+import { getVariantsForRecipeIngredients } from '$lib/server/ingredients/variants';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -27,9 +28,18 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		.where(eq(recipeIngredients.recipeId, params.id))
 		.orderBy(recipeIngredients.sortOrder);
 
+	// Fetch variants for all recipe ingredients
+	const recipeIngIds = recipeIngs.map((ri) => ri.id);
+	const variantsMap = await getVariantsForRecipeIngredients(recipeIngIds);
+
+	const ingredientsWithVariants = recipeIngs.map((ri) => ({
+		...ri,
+		variants: variantsMap[ri.id] || []
+	}));
+
 	return {
 		recipe: recipe[0],
-		ingredients: recipeIngs
+		ingredients: ingredientsWithVariants
 	};
 };
 

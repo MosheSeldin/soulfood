@@ -72,6 +72,28 @@ export const recipeIngredients = sqliteTable('recipe_ingredients', {
 	sortOrder: integer('sort_order').notNull().default(0)
 });
 
+// ──── Ingredient Variants ────
+export const ingredientVariants = sqliteTable('ingredient_variants', {
+	id: text('id').primaryKey(),
+	ingredientId: text('ingredient_id')
+		.notNull()
+		.references(() => ingredients.id),
+	name: text('name').notNull(),
+	nameHe: text('name_he')
+});
+
+// ──── Recipe Ingredient Variants (which variants a recipe offers) ────
+export const recipeIngredientVariants = sqliteTable('recipe_ingredient_variants', {
+	id: text('id').primaryKey(),
+	recipeIngredientId: text('recipe_ingredient_id')
+		.notNull()
+		.references(() => recipeIngredients.id, { onDelete: 'cascade' }),
+	variantId: text('variant_id')
+		.notNull()
+		.references(() => ingredientVariants.id),
+	sortOrder: integer('sort_order').notNull().default(0)
+});
+
 // ──── Pantry Items ────
 export const pantryItems = sqliteTable('pantry_items', {
 	id: text('id').primaryKey(),
@@ -108,7 +130,8 @@ export const shoppingListItems = sqliteTable('shopping_list_items', {
 	isChecked: integer('is_checked', { mode: 'boolean' }).notNull().default(false),
 	aisleCategoryId: text('aisle_category_id').references(() => aisleCategories.id),
 	sourceRecipes: text('source_recipes', { mode: 'json' }).$type<string[]>(),
-	addedManually: integer('added_manually', { mode: 'boolean' }).notNull().default(false)
+	addedManually: integer('added_manually', { mode: 'boolean' }).notNull().default(false),
+	chosenVariantId: text('chosen_variant_id').references(() => ingredientVariants.id)
 });
 
 // ──── Shopping List Recipes (which recipes are on this list) ────

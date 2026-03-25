@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Heart, Clock, ExternalLink, Trash2, ShoppingCart, ArrowRight } from 'lucide-svelte';
+	import { Heart, Clock, ExternalLink, Trash2, ShoppingCart, ArrowRight, Pencil, ChevronDown } from 'lucide-svelte';
 	import { formatTime } from '$lib/utils/helpers';
 	import type { PageData } from './$types';
 
@@ -15,6 +15,23 @@
 	let currentServings = $derived(
 		data.recipe.servings ? data.recipe.servings * servingsMultiplier : null
 	);
+
+	// Track selected variant per ingredient (keyed by recipeIngredient ID)
+	let selectedVariants = $state<Record<string, string>>({});
+
+	function getDisplayName(ing: typeof data.ingredients[0]): string {
+		const variants = ing.variants;
+		if (!variants || variants.length === 0) {
+			return ing.ingredientNameHe || ing.ingredientName || '';
+		}
+		const selectedId = selectedVariants[ing.id];
+		if (selectedId) {
+			const v = variants.find((v) => v.variantId === selectedId);
+			if (v) return v.nameHe || v.name;
+		}
+		// Default to first variant
+		return variants[0].nameHe || variants[0].name;
+	}
 
 	function adjustServings(delta: number) {
 		const newVal = servingsMultiplier + delta * 0.5;
@@ -104,14 +121,28 @@
 			{#each data.ingredients as ing}
 				<li class="flex items-baseline gap-2 text-sm">
 					<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-primary mt-1.5"></span>
-					<span>
+					<span class="flex flex-wrap items-baseline gap-1">
 						{#if ing.quantity}
 							<strong>{formatQuantity(ing.quantity)}</strong>
 						{/if}
 						{#if ing.unit}
 							{unitLabels[ing.unit] || ing.unit}
 						{/if}
-						{ing.ingredientNameHe || ing.ingredientName || ''}
+						{#if ing.variants && ing.variants.length > 1}
+							<span class="relative inline-block">
+								<select
+									class="appearance-none rounded border border-border bg-surface-warm pe-5 ps-1.5 py-0.5 text-sm font-medium text-primary cursor-pointer hover:bg-primary/10 focus:border-primary focus:outline-none"
+									value={selectedVariants[ing.id] || ing.variants[0].variantId}
+									onchange={(e) => { selectedVariants[ing.id] = (e.target as HTMLSelectElement).value; }}
+								>
+									{#each ing.variants as v}
+										<option value={v.variantId}>{v.nameHe || v.name}</option>
+									{/each}
+								</select>
+							</span>
+						{:else}
+							{getDisplayName(ing)}
+						{/if}
 						{#if ing.preparation}
 							<span class="text-text-muted">({ing.preparation})</span>
 						{/if}
@@ -144,6 +175,9 @@
 		<a href="/shopping?add={data.recipe.id}" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 font-medium text-white transition hover:bg-accent/90">
 			<ShoppingCart size={16} />
 			הוסף לרשימת קניות
+		</a>
+		<a href="/recipes/{data.recipe.id}/edit" class="rounded-lg border border-border px-4 py-2.5 text-sm text-text-muted transition hover:bg-surface-warm">
+			<Pencil size={16} />
 		</a>
 		<form method="POST" action="?/delete" use:enhance={() => ({ result }) => { if (result.type === 'redirect') window.location.href = '/recipes'; }}>
 			<button class="rounded-lg border border-danger/30 px-4 py-2.5 text-sm text-danger transition hover:bg-danger/10">

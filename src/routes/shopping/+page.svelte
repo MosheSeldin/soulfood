@@ -100,34 +100,55 @@
 					{#if !collapsedAisles.has(aisle.id)}
 						<div class="border-t border-border">
 							{#each aisle.items.sort((a, b) => (a.isChecked ? 1 : 0) - (b.isChecked ? 1 : 0)) as item}
-								<form method="POST" action="?/toggleItem" use:enhance>
-									<input type="hidden" name="itemId" value={item.id} />
-									<input type="hidden" name="isChecked" value={String(item.isChecked)} />
-									<button
-										class="flex w-full items-center gap-3 px-4 py-3 text-right transition-colors hover:bg-surface {item.isChecked ? 'bg-surface/50' : ''}"
-										style="min-height: 48px"
-									>
-										<!-- Checkbox -->
-										<span
-											class="flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors {item.isChecked ? 'border-accent bg-accent' : 'border-border'}"
+								<div class="border-b border-border/50 last:border-b-0">
+									<form method="POST" action="?/toggleItem" use:enhance>
+										<input type="hidden" name="itemId" value={item.id} />
+										<input type="hidden" name="isChecked" value={String(item.isChecked)} />
+										<button
+											class="flex w-full items-center gap-3 px-4 py-3 text-right transition-colors hover:bg-surface {item.isChecked ? 'bg-surface/50' : ''}"
+											style="min-height: 48px"
 										>
-											{#if item.isChecked}
-												<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-											{/if}
-										</span>
-
-										<!-- Content -->
-										<span class="flex-1 text-sm {item.isChecked ? 'shopping-item-checked' : ''}">
-											{#if item.quantity}
-												<strong class="font-semibold">{formatQty(item.quantity)}</strong>
-												{#if item.unit}
-													{unitLabels[item.unit] || item.unit}
+											<!-- Checkbox -->
+											<span
+												class="flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors {item.isChecked ? 'border-accent bg-accent' : 'border-border'}"
+											>
+												{#if item.isChecked}
+													<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 												{/if}
-											{/if}
-											{item.customName || item.ingredientNameHe || item.ingredientName || ''}
-										</span>
-									</button>
-								</form>
+											</span>
+
+											<!-- Content -->
+											<span class="flex-1 text-sm {item.isChecked ? 'shopping-item-checked' : ''}">
+												{#if item.quantity}
+													<strong class="font-semibold">{formatQty(item.quantity)}</strong>
+													{#if item.unit}
+														{unitLabels[item.unit] || item.unit}
+													{/if}
+												{/if}
+												{#if item.variantNameHe || item.variantName}
+													{item.variantNameHe || item.variantName}
+												{:else}
+													{item.customName || item.ingredientNameHe || item.ingredientName || ''}
+												{/if}
+											</span>
+										</button>
+									</form>
+
+									<!-- Variant selector for items with available variants but no chosen variant -->
+									{#if item.availableVariants.length > 1 && !item.chosenVariantId && !item.isChecked}
+										<div class="flex flex-wrap gap-1 px-4 pb-2">
+											{#each item.availableVariants as variant}
+												<form method="POST" action="?/chooseVariant" use:enhance>
+													<input type="hidden" name="itemId" value={item.id} />
+													<input type="hidden" name="variantId" value={variant.id} />
+													<button class="rounded-full border border-primary/30 bg-primary/5 px-2.5 py-0.5 text-xs text-primary hover:bg-primary/15">
+														{variant.nameHe || variant.name}
+													</button>
+												</form>
+											{/each}
+										</div>
+									{/if}
+								</div>
 							{/each}
 						</div>
 					{/if}

@@ -7,6 +7,7 @@ interface QuantityItem {
 	quantity: number | null;
 	unit: string | null;
 	aisleCategoryId: string | null;
+	chosenVariantId?: string | null;
 }
 
 export interface AggregatedItem {
@@ -17,6 +18,7 @@ export interface AggregatedItem {
 	unit: string | null;
 	aisleCategoryId: string | null;
 	sourceRecipeIds: string[];
+	chosenVariantId?: string | null;
 }
 
 // Conversion factors to a base unit within each family
@@ -66,7 +68,10 @@ export function aggregateIngredients(
 	const grouped = new Map<string, (QuantityItem & { recipeId: string })[]>();
 
 	for (const item of items) {
-		const key = item.ingredientId || `custom:${item.name.toLowerCase()}`;
+		// Group by ingredientId + chosenVariantId so different variants stay separate
+		const baseKey = item.ingredientId || `custom:${item.name.toLowerCase()}`;
+		const variantSuffix = item.chosenVariantId ? `:v:${item.chosenVariantId}` : '';
+		const key = baseKey + variantSuffix;
 		if (!grouped.has(key)) grouped.set(key, []);
 		grouped.get(key)!.push(item);
 	}
@@ -86,7 +91,8 @@ export function aggregateIngredients(
 				quantity: null,
 				unit: null,
 				aisleCategoryId: first.aisleCategoryId,
-				sourceRecipeIds: recipeIds
+				sourceRecipeIds: recipeIds,
+				chosenVariantId: first.chosenVariantId
 			});
 			continue;
 		}
@@ -102,7 +108,8 @@ export function aggregateIngredients(
 				quantity: roundNice(total),
 				unit: first.unit,
 				aisleCategoryId: first.aisleCategoryId,
-				sourceRecipeIds: recipeIds
+				sourceRecipeIds: recipeIds,
+				chosenVariantId: first.chosenVariantId
 			});
 			continue;
 		}
@@ -129,7 +136,8 @@ export function aggregateIngredients(
 				quantity: roundNice(best.quantity),
 				unit: best.unit,
 				aisleCategoryId: first.aisleCategoryId,
-				sourceRecipeIds: recipeIds
+				sourceRecipeIds: recipeIds,
+				chosenVariantId: first.chosenVariantId
 			});
 			continue;
 		}
@@ -143,7 +151,8 @@ export function aggregateIngredients(
 				quantity: g.quantity,
 				unit: g.unit,
 				aisleCategoryId: g.aisleCategoryId,
-				sourceRecipeIds: [g.recipeId]
+				sourceRecipeIds: [g.recipeId],
+				chosenVariantId: g.chosenVariantId
 			});
 		}
 	}
