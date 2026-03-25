@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+
+@theme {
+	--font-sans: 'Heebo', sans-serif;
+	--color-primary: #c45d3e;
+	--color-primary-light: #d4785e;
+	--color-primary-dark: #a34a2f;
+	--color-surface: #faf7f2;
+	--color-surface-warm: #f5efe6;
+	--color-text: #2d1810;
+	--color-text-muted: #6b5c54;
+	--color-accent: #5a7247;
+	--color-accent-light: #7a9467;
+	--color-checked: #b8b0a8;
+	--color-border: #e0d8cf;
+	--color-danger: #c0392b;
+}
+
+html {
+	background-color: var(--color-surface);
+	color: var(--color-text);
+}
+
+body {
+	font-family: var(--font-sans);
+	min-height: 100dvh;
+}
+
+/* Smooth checkbox transitions */
+.shopping-item-checked {
+	text-decoration: line-through;
+	color: var(--color-checked);
+}
