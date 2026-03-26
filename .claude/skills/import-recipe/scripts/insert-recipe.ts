@@ -5,16 +5,16 @@
  * The JSON file should match the RecipeImport interface.
  */
 
+import 'dotenv/config';
 import { readFileSync } from 'fs';
-import { db } from '../../../src/lib/server/db';
-import { recipes, recipeIngredients, users } from '../../../src/lib/server/db/schema';
-import { generateId } from '../../../src/lib/utils/helpers';
-import { findOrCreateIngredient } from '../../../src/lib/server/ingredients/normalizer';
+import { db } from '../../../../src/lib/server/db';
+import { recipes, recipeIngredients, users } from '../../../../src/lib/server/db/schema';
+import { generateId } from '../../../../src/lib/utils/helpers';
+import { findOrCreateIngredient } from '../../../../src/lib/server/ingredients/normalizer';
 import {
 	findOrCreateVariant,
 	setRecipeIngredientVariants
-} from '../../../src/lib/server/ingredients/variants';
-import { eq } from 'drizzle-orm';
+} from '../../../../src/lib/server/ingredients/variants';
 
 interface IngredientImport {
 	quantity: number | null;
@@ -85,7 +85,7 @@ async function main() {
 
 	for (let i = 0; i < data.ingredients.length; i++) {
 		const ing = data.ingredients[i];
-		const ingredientId = await findOrCreateIngredient(ing.canonicalName, ing.canonicalNameHe);
+		const ingredientId = await findOrCreateIngredient(ing.canonicalName, ing.canonicalNameHe ?? undefined);
 
 		const recipeIngId = generateId();
 		await db.insert(recipeIngredients).values({
@@ -103,7 +103,7 @@ async function main() {
 		if (ing.variants && ing.variants.length > 0) {
 			const variantIds: string[] = [];
 			for (const v of ing.variants) {
-				const vid = await findOrCreateVariant(ingredientId, v.name, v.nameHe);
+				const vid = await findOrCreateVariant(ingredientId, v.name, v.nameHe ?? undefined);
 				variantIds.push(vid);
 			}
 			await setRecipeIngredientVariants(recipeIngId, variantIds);

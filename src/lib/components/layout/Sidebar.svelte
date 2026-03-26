@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { BookOpen, ShoppingCart, Refrigerator, Egg, UtensilsCrossed } from 'lucide-svelte';
+	import { BookOpen, ShoppingCart, Refrigerator, Egg, UtensilsCrossed, LayoutGrid } from 'lucide-svelte';
 
 	const links = [
 		{ href: '/recipes', label: 'מתכונים', icon: BookOpen },
 		{ href: '/shopping', label: 'רשימת קניות', icon: ShoppingCart },
 		{ href: '/pantry', label: 'מלאי בבית', icon: Refrigerator },
-		{ href: '/ingredients', label: 'מצרכים', icon: Egg }
+		{ href: '/ingredients', label: 'מצרכים', icon: Egg },
+		{ href: '/aisles', label: 'מדורים', icon: LayoutGrid }
 	];
 </script>
 
