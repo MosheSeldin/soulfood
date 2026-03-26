@@ -17,6 +17,7 @@
 	let addingVariantFor = $state<string | null>(null);
 	let newVariantName = $state('');
 	let newVariantNameHe = $state('');
+	let collapsedIngredients = $state<Record<string, boolean>>({});
 
 	let filteredIngredients = $derived(
 		data.ingredients.filter((ing) => {
@@ -218,30 +219,44 @@
 					{:else}
 						<!-- Display mode -->
 						<div class="flex items-center gap-2">
+							<button
+								onclick={() => { collapsedIngredients[ing.id] = !collapsedIngredients[ing.id]; }}
+								class="p-0.5 text-text-muted hover:text-primary transition-colors {ing.variants.length > 0 ? '' : 'invisible'}"
+								title={ing.variants.length > 0 ? (collapsedIngredients[ing.id] ? 'הרחב' : 'צמצם') : ''}
+							>
+								<svg class="w-4 h-4 transition-transform {collapsedIngredients[ing.id] ? '' : 'rotate-90'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+								</svg>
+							</button>
+
 							<div class="flex-1 min-w-0">
 								<div class="flex items-center gap-1.5 flex-wrap">
 									<span class="text-sm font-medium">{ing.nameHe || ing.name}</span>
 									{#if ing.nameHe && ing.name}
 										<span class="text-xs text-text-muted">{ing.name}</span>
 									{/if}
+									{#if ing.variants.length > 0}
+										<span class="text-xs text-text-muted bg-primary/10 px-1.5 py-0.5 rounded-full">{ing.variants.length} גרסאות</span>
+									{/if}
 									{#if ing.usageCount > 0}
 										<span class="text-xs text-text-muted">×{ing.usageCount}</span>
 									{/if}
 								</div>
 
-								<!-- Variants row -->
-								{#if ing.variants.length > 0 || addingVariantFor === ing.id}
-									<div class="mt-1.5 flex flex-wrap items-center gap-1">
+								<!-- Expanded variants list -->
+								{#if !collapsedIngredients[ing.id] && (ing.variants.length > 0 || addingVariantFor === ing.id)}
+									<div class="mt-1.5 flex flex-col gap-1 ps-6 border-s border-primary/20">
 										{#each ing.variants as variant}
-											<span class="inline-flex items-center gap-0.5 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs text-primary">
-												{variant.nameHe || variant.name}
-												<form method="POST" action="?/deleteVariant" use:enhance={() => async ({ update }) => { await update({ reset: false }); }} class="inline">
+											<div class="flex items-center gap-1 -ms-4 ps-3">
+												<div class="text-xs text-primary/70">•</div>
+												<span class="text-xs text-text-muted">{variant.nameHe || variant.name}</span>
+												<form method="POST" action="?/deleteVariant" use:enhance={() => async ({ update }) => { await update({ reset: false }); }} class="inline ms-auto">
 													<input type="hidden" name="variantId" value={variant.id} />
-													<button type="submit" class="hover:text-danger ms-0.5">
+													<button type="submit" class="text-text-muted hover:text-danger transition-colors">
 														<X size={10} />
 													</button>
 												</form>
-											</span>
+											</div>
 										{/each}
 
 										{#if addingVariantFor === ing.id}
@@ -254,7 +269,7 @@
 													newVariantNameHe = '';
 													await update({ reset: false });
 												}}
-												class="flex items-center gap-1"
+												class="flex items-center gap-1 -ms-4 ps-3"
 											>
 												<input type="hidden" name="ingredientId" value={ing.id} />
 												<input
@@ -279,17 +294,16 @@
 													<X size={12} />
 												</button>
 											</form>
-										{:else}
+										{:else if ing.variants.length > 0}
 											<button
 												onclick={() => { addingVariantFor = ing.id; newVariantName = ''; newVariantNameHe = ''; }}
-												class="inline-flex items-center gap-0.5 rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-text-muted hover:border-primary hover:text-primary"
+												class="text-xs text-text-muted hover:text-primary transition-colors text-start ps-4"
 											>
-												<Plus size={9} />
-												גרסה
+												+ הוסף גרסה
 											</button>
 										{/if}
 									</div>
-								{:else}
+								{:else if !collapsedIngredients[ing.id] && addingVariantFor !== ing.id && ing.variants.length === 0}
 									<button
 										onclick={() => { addingVariantFor = ing.id; newVariantName = ''; newVariantNameHe = ''; }}
 										class="mt-1 inline-flex items-center gap-0.5 text-xs text-text-muted hover:text-primary"
