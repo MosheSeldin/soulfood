@@ -10,16 +10,14 @@
 	];
 </script>
 
-<nav class="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-white md:hidden">
+<nav class="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-surface/85 backdrop-blur-lg md:hidden">
 	<div class="flex items-center justify-around">
 		{#each links as link}
+			{@const active = page.url.pathname === link.href || page.url.pathname.startsWith(link.href + '/')}
 			<a
 				href={link.href}
-				class="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs transition-colors {page.url
-					.pathname === link.href ||
-				page.url.pathname.startsWith(link.href + '/')
-					? 'text-primary font-semibold'
-					: 'text-text-muted'}"
+				class="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs transition-colors
+					{active ? 'text-primary font-semibold nav-active' : 'text-text-muted'}"
 			>
 				<link.icon size={22} />
 				<span>{link.label}</span>

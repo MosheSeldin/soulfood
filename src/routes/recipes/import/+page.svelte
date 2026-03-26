@@ -84,7 +84,7 @@
 					type="url"
 					bind:value={url}
 					onkeydown={(e) => e.key === 'Enter' && handleScrape()}
-					class="w-full rounded-lg border border-border bg-white py-2.5 pe-3 ps-10 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+					class="input-glass w-full pe-3 ps-10"
 					placeholder="https://www.example.com/recipe..."
 					dir="ltr"
 				/>
@@ -92,7 +92,7 @@
 			<button
 				onclick={handleScrape}
 				disabled={loading || !url.trim()}
-				class="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:bg-primary-dark disabled:opacity-50"
+				class="btn-primary flex items-center gap-1.5 disabled:opacity-50"
 			>
 				{#if loading}
 					<Loader2 size={16} class="animate-spin" />
@@ -118,7 +118,7 @@
 
 	<!-- Preview & Edit -->
 	{#if preview}
-		<form method="POST" action="?/save" use:enhance class="space-y-4 rounded-xl border border-border bg-white p-4">
+		<form method="POST" action="?/save" use:enhance class="glass-card space-y-4 p-4">
 			<input type="hidden" name="sourceUrl" value={url} />
 			<input type="hidden" name="ingredients" value={JSON.stringify(preview.ingredients)} />
 			<input type="hidden" name="instructions" value={JSON.stringify(preview.instructions)} />
@@ -143,7 +143,7 @@
 					name="title"
 					type="text"
 					value={preview.title}
-					class="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+					class="input-glass w-full"
 				/>
 			</div>
 
@@ -154,7 +154,7 @@
 						id="desc"
 						name="description"
 						rows="2"
-						class="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+						class="input-glass w-full"
 					>{preview.description}</textarea>
 				</div>
 			{/if}
@@ -162,31 +162,15 @@
 			<div class="grid grid-cols-3 gap-3">
 				<div>
 					<label for="servings" class="mb-1 block text-sm font-medium">מנות</label>
-					<input
-						id="servings"
-						name="servings"
-						type="number"
-						value={preview.servings ?? ''}
-						class="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-					/>
+					<input id="servings" name="servings" type="number" value={preview.servings ?? ''} class="input-glass w-full" />
 				</div>
 				<div>
 					<label class="mb-1 block text-sm font-medium">קטגוריה</label>
-					<input
-						name="category"
-						type="text"
-						value={preview.category ?? ''}
-						class="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-					/>
+					<input name="category" type="text" value={preview.category ?? ''} class="input-glass w-full" />
 				</div>
 				<div>
 					<label class="mb-1 block text-sm font-medium">מטבח</label>
-					<input
-						name="cuisine"
-						type="text"
-						value={preview.cuisine ?? ''}
-						class="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-					/>
+					<input name="cuisine" type="text" value={preview.cuisine ?? ''} class="input-glass w-full" />
 				</div>
 			</div>
 
@@ -200,7 +184,7 @@
 								type="text"
 								aria-label="מצרך {i + 1}"
 								bind:value={preview.ingredients[i]}
-								class="flex-1 rounded border border-border px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+								class="input-glass flex-1"
 							/>
 							<button
 								type="button"
@@ -215,7 +199,7 @@
 				<button
 					type="button"
 					onclick={addIngredient}
-					class="mt-1.5 flex items-center gap-1 text-sm text-primary hover:text-primary-dark"
+					class="mt-1.5 flex items-center gap-1 text-sm text-primary hover:text-primary-light"
 				>
 					<Plus size={14} />
 					הוסף מצרך
@@ -233,7 +217,7 @@
 								aria-label="שלב {i + 1}"
 								bind:value={preview.instructions[i]}
 								rows="2"
-								class="flex-1 rounded border border-border px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+								class="input-glass flex-1"
 							></textarea>
 							<button
 								type="button"
@@ -251,10 +235,7 @@
 				<p class="text-sm text-danger">{form.error}</p>
 			{/if}
 
-			<button
-				type="submit"
-				class="w-full rounded-lg bg-primary px-4 py-2.5 font-medium text-white transition hover:bg-primary-dark"
-			>
+			<button type="submit" class="btn-primary w-full">
 				שמור מתכון
 			</button>
 		</form>

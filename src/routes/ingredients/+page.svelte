@@ -40,7 +40,6 @@
 			if (!groups.has(key)) groups.set(key, { label, items: [] });
 			groups.get(key)!.items.push(ing);
 		}
-		// Sort groups: aisles with sortOrder first (via aisleCategories order), then unassigned last
 		const aisleOrder = new Map(data.aisleCategories.map((a, i) => [a.id, i]));
 		return [...groups.entries()]
 			.sort(([a], [b]) => {
@@ -81,11 +80,11 @@
 		<div class="flex items-center gap-2">
 			<a
 				href="/aisles"
-				class="rounded-lg border border-border px-3 py-1.5 text-xs text-text-muted hover:bg-surface-warm transition-colors"
+				class="btn-ghost px-3 py-1.5 text-xs"
 			>
 				ניהול מדורים
 			</a>
-			<span class="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+			<span class="glass-card px-3 py-1 text-sm font-medium text-primary">
 				{data.ingredients.length}
 			</span>
 		</div>
@@ -98,7 +97,7 @@
 			type="text"
 			bind:value={searchQuery}
 			placeholder="חיפוש מצרך..."
-			class="w-full rounded-lg border border-border bg-white py-2.5 pe-3 ps-9 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+			class="input-glass w-full pe-3 ps-9"
 		/>
 		{#if searchQuery}
 			<button
@@ -118,13 +117,13 @@
 	{:else}
 		{#each groupedByAisle() as group}
 			<div class="mb-4">
-				<h3 class="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wide text-text-muted">
+				<h3 class="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wide text-primary">
 					{group.label}
-					<span class="ms-1 font-normal normal-case">({group.items.length})</span>
+					<span class="ms-1 font-normal normal-case text-text-muted">({group.items.length})</span>
 				</h3>
 				<div class="space-y-1">
 			{#each group.items as ing}
-				<div class="rounded-lg border border-border bg-white px-3 py-2.5 {ing.usageCount === 0 ? 'border-dashed opacity-70' : ''}">
+				<div class="glass-card px-3 py-2.5 {ing.usageCount === 0 ? 'border-dashed opacity-70' : ''}">
 					{#if editingId === ing.id}
 						<!-- Edit mode -->
 						<form
@@ -145,31 +144,31 @@
 									name="nameHe"
 									bind:value={editNameHe}
 									placeholder="שם בעברית"
-									class="flex-1 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+									class="input-glass flex-1 px-2 py-1"
 								/>
 								<input
 									type="text"
 									name="name"
 									bind:value={editName}
 									placeholder="English name"
-									class="flex-1 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+									class="input-glass flex-1 px-2 py-1"
 								/>
 							</div>
 							<div class="flex items-center gap-2">
 								<select
 									name="aisleCategoryId"
 									bind:value={editAisleCategoryId}
-									class="flex-1 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+									class="input-glass flex-1 px-2 py-1"
 								>
 									<option value="">ללא מדור</option>
 									{#each data.aisleCategories as aisle}
 										<option value={aisle.id}>{aisle.nameHe || aisle.name}</option>
 									{/each}
 								</select>
-								<button type="submit" class="rounded bg-accent p-1.5 text-white">
+								<button type="submit" class="rounded bg-accent p-1.5 text-surface shadow-[0_0_8px_rgba(52,211,153,0.3)]">
 									<Check size={14} />
 								</button>
-								<button type="button" onclick={cancelEdit} class="rounded border border-border p-1.5 text-text-muted">
+								<button type="button" onclick={cancelEdit} class="btn-ghost p-1.5">
 									<X size={14} />
 								</button>
 							</div>
@@ -195,7 +194,7 @@
 								<select
 									name="toId"
 									bind:value={mergeTargetId}
-									class="flex-1 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+									class="input-glass flex-1 px-2 py-1"
 									required
 								>
 									<option value="">בחר מצרך יעד...</option>
@@ -210,7 +209,7 @@
 								>
 									מזג
 								</button>
-								<button type="button" onclick={cancelMerge} class="rounded border border-border p-1.5 text-text-muted">
+								<button type="button" onclick={cancelMerge} class="btn-ghost p-1.5">
 									<X size={14} />
 								</button>
 							</div>
@@ -234,11 +233,11 @@
 								{#if ing.variants.length > 0 || addingVariantFor === ing.id}
 									<div class="mt-1.5 flex flex-wrap items-center gap-1">
 										{#each ing.variants as variant}
-											<span class="inline-flex items-center gap-0.5 rounded-full bg-primary/8 px-2 py-0.5 text-xs text-primary">
+											<span class="inline-flex items-center gap-0.5 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs text-primary">
 												{variant.nameHe || variant.name}
 												<form method="POST" action="?/deleteVariant" use:enhance={() => async ({ update }) => { await update({ reset: false }); }} class="inline">
 													<input type="hidden" name="variantId" value={variant.id} />
-													<button type="submit" class="hover:text-red-500 ms-0.5">
+													<button type="submit" class="hover:text-danger ms-0.5">
 														<X size={10} />
 													</button>
 												</form>
@@ -264,14 +263,14 @@
 													bind:value={newVariantNameHe}
 													placeholder="עברית"
 													autofocus
-													class="w-20 rounded border border-primary px-1.5 py-0.5 text-xs focus:outline-none"
+													class="input-glass w-20 px-1.5 py-0.5 text-xs"
 												/>
 												<input
 													type="text"
 													name="variantName"
 													bind:value={newVariantName}
 													placeholder="English"
-													class="w-20 rounded border border-border px-1.5 py-0.5 text-xs focus:outline-none"
+													class="input-glass w-20 px-1.5 py-0.5 text-xs"
 												/>
 												<button type="submit" class="text-accent">
 													<Check size={12} />
@@ -326,7 +325,7 @@
 										<input type="hidden" name="ingredientId" value={ing.id} />
 										<button
 											type="submit"
-											class="p-1 text-text-muted hover:text-red-500 transition-colors"
+											class="p-1 text-text-muted hover:text-danger transition-colors"
 											title="מחק"
 											onclick={(e) => { if (!confirm('למחוק את המצרך?')) e.preventDefault(); }}
 										>
@@ -350,7 +349,7 @@
 									<input type="hidden" name="ingredientId" value={ing.id} />
 									<input type="hidden" name="aisleCategoryId" value={ing.aisleCategoryId || ''} />
 									<input type="hidden" name="defaultUnit" value={ing.defaultUnit || ''} />
-									<button class="flex h-7 w-7 items-center justify-center rounded-full transition-colors {addedItems[ing.id] ? 'bg-accent text-white' : 'text-text-muted hover:bg-primary/10 hover:text-primary'}">
+									<button class="flex h-7 w-7 items-center justify-center rounded-full transition-all {addedItems[ing.id] ? 'bg-accent text-surface glow-success' : 'text-text-muted hover:bg-primary/10 hover:text-primary'}">
 										{#if addedItems[ing.id]}
 											<Check size={14} />
 										{:else}

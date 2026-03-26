@@ -9,22 +9,24 @@
 	let isFirstTime = $derived(!data.names.length || data.names.every(() => true));
 </script>
 
-<div class="flex min-h-[80dvh] items-center justify-center">
-	<div class="w-full max-w-xs space-y-6">
+<div class="sacred-mandala flex min-h-[80dvh] items-center justify-center">
+	<div class="relative z-10 w-full max-w-xs space-y-6">
 		<div class="text-center">
-			<UtensilsCrossed size={40} class="mx-auto text-primary" />
-			<h1 class="mt-3 text-2xl font-bold text-primary">Soul Food</h1>
+			<div class="logo-ring mx-auto inline-flex">
+				<UtensilsCrossed size={40} class="text-primary" />
+			</div>
+			<h1 class="mt-6 font-heading text-2xl font-bold text-primary brand-glow">Soul Food</h1>
 			<p class="mt-1 text-sm text-text-muted">ניהול מתכונים ורשימות קניות</p>
 		</div>
 
-		<form method="POST" use:enhance class="space-y-4">
+		<form method="POST" use:enhance class="glass-card space-y-4 p-6">
 			<div>
-				<label for="name" class="mb-1 block text-sm font-medium">שם</label>
+				<label for="name" class="mb-1 block text-sm font-medium text-text">שם</label>
 				<select
 					id="name"
 					name="name"
 					bind:value={selectedName}
-					class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+					class="input-glass w-full"
 				>
 					{#each data.names as name}
 						<option value={name}>{name}</option>
@@ -33,7 +35,7 @@
 			</div>
 
 			<div>
-				<label for="password" class="mb-1 block text-sm font-medium">
+				<label for="password" class="mb-1 block text-sm font-medium text-text">
 					סיסמה
 					{#if isFirstTime}
 						<span class="text-xs text-text-muted">(בחר סיסמה חדשה)</span>
@@ -44,7 +46,7 @@
 					name="password"
 					type="password"
 					required
-					class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+					class="input-glass w-full"
 					placeholder="הכנס סיסמה"
 				/>
 			</div>
@@ -53,10 +55,7 @@
 				<p class="text-sm text-danger">{form.error}</p>
 			{/if}
 
-			<button
-				type="submit"
-				class="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:bg-primary-dark"
-			>
+			<button type="submit" class="btn-primary w-full">
 				כניסה
 			</button>
 		</form>

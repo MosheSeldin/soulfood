@@ -109,7 +109,7 @@
 	<div class="mb-4 flex items-center justify-between">
 		<h2 class="text-xl font-bold">רשימת קניות</h2>
 		{#if data.totalItems > 0}
-			<span class="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+			<span class="glass-card px-3 py-1 text-sm font-medium text-primary">
 				{data.checkedItems}/{data.totalItems}
 			</span>
 		{/if}
@@ -117,10 +117,10 @@
 
 	<!-- Progress bar -->
 	{#if data.totalItems > 0}
-		<div class="mb-4 h-2 overflow-hidden rounded-full bg-border">
+		<div class="mb-4 h-2 overflow-hidden rounded-full bg-surface-warm">
 			<div
-				class="h-full rounded-full bg-accent transition-all duration-300"
-				style="width: {(data.checkedItems / data.totalItems) * 100}%"
+				class="h-full rounded-full bg-linear-to-l from-primary to-accent transition-all duration-300"
+				style="width: {(data.checkedItems / data.totalItems) * 100}%; box-shadow: 0 0 12px rgba(45, 212, 168, 0.4);"
 			></div>
 		</div>
 	{/if}
@@ -131,7 +131,7 @@
 			{#each data.listRecipes as recipe}
 				<form method="POST" action="?/removeRecipe" use:enhance>
 					<input type="hidden" name="recipeId" value={recipe.recipeId} />
-					<button class="flex items-center gap-1 rounded-full bg-surface-warm px-2.5 py-1 text-xs text-text-muted hover:bg-border">
+					<button class="flex items-center gap-1 rounded-full border border-border bg-surface-warm px-2.5 py-1 text-xs text-text-muted transition-colors hover:border-primary/30 hover:text-text">
 						{recipe.titleHe || recipe.title}
 						<X size={12} />
 					</button>
@@ -144,20 +144,20 @@
 	{#if data.aisles.length === 0}
 		<div class="mt-12 text-center">
 			<p class="text-text-muted">הרשימה ריקה</p>
-			<a href="/recipes" class="mt-2 inline-block text-sm text-primary hover:text-primary-dark">
+			<a href="/recipes" class="mt-2 inline-block text-sm text-primary hover:text-primary-light">
 				בחר מתכונים לבישול
 			</a>
 		</div>
 	{:else}
 		<div class="space-y-2">
 			{#each data.aisles as aisle}
-				<div class="overflow-hidden rounded-xl border border-border bg-white">
+				<div class="glass-card overflow-hidden">
 					<!-- Aisle header -->
 					<button
 						onclick={() => toggleAisle(aisle.id)}
-						class="flex w-full items-center justify-between px-4 py-2.5 text-sm font-semibold hover:bg-surface-warm"
+						class="flex w-full items-center justify-between px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-surface-warm/30"
 					>
-						<span>{aisle.name}</span>
+						<span class="text-primary">{aisle.name}</span>
 						<span class="flex items-center gap-2 text-text-muted">
 							<span class="text-xs">{aisle.items.filter(i => !i.isChecked).length}</span>
 							{#if collapsedAisles.has(aisle.id)}
@@ -173,7 +173,7 @@
 							{#each aisle.items.sort((a, b) => (a.isChecked ? 1 : 0) - (b.isChecked ? 1 : 0)) as item}
 								<div class="border-b border-border/50 last:border-b-0">
 									<div
-										class="flex w-full items-center gap-3 px-4 py-3 text-right transition-colors {item.isChecked ? 'bg-surface/50' : ''}"
+										class="flex w-full items-center gap-3 px-4 py-3 text-right transition-colors {item.isChecked ? 'opacity-60' : ''}"
 										style="min-height: 48px"
 									>
 										<!-- Checkbox (toggle) -->
@@ -181,7 +181,7 @@
 											<input type="hidden" name="itemId" value={item.id} />
 											<input type="hidden" name="isChecked" value={String(item.isChecked)} />
 											<button
-												class="flex h-5 w-5 items-center justify-center rounded border-2 transition-colors {item.isChecked ? 'border-accent bg-accent' : 'border-border'}"
+												class="flex h-5 w-5 items-center justify-center rounded border-2 transition-all {item.isChecked ? 'border-accent bg-accent shadow-[0_0_8px_rgba(52,211,153,0.4)]' : 'border-text-muted/40 hover:border-primary'}"
 											>
 												{#if item.isChecked}
 													<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -218,16 +218,16 @@
 													bind:value={editQuantity}
 													step="0.25"
 													min="0"
-													class="w-14 rounded border border-primary px-1.5 py-0.5 text-center text-sm"
+													class="input-glass w-14 px-1.5 py-0.5 text-center text-sm"
 													autofocus
 												/>
-												<select name="unit" bind:value={editUnit} class="rounded border border-primary px-1 py-0.5 text-xs">
+												<select name="unit" bind:value={editUnit} class="input-glass px-1 py-0.5 text-xs">
 													<option value="">-</option>
 													{#each unitOptions as u}
 														<option value={u}>{unitLabels[u]}</option>
 													{/each}
 												</select>
-												<button type="submit" class="rounded bg-accent p-1 text-white">
+												<button type="submit" class="rounded bg-accent p-1 text-surface shadow-[0_0_8px_rgba(52,211,153,0.3)]">
 													<Check size={14} />
 												</button>
 											</form>
@@ -235,7 +235,7 @@
 											<!-- svelte-ignore a11y_click_events_have_key_events -->
 											<!-- svelte-ignore a11y_no_static_element_interactions -->
 											<span
-												class="flex shrink-0 cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-sm hover:bg-surface-warm"
+												class="flex shrink-0 cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-sm transition-colors hover:bg-surface-warm/30"
 												onclick={(e) => { e.stopPropagation(); startEditItem(item); }}
 											>
 												{#if item.quantity}
@@ -252,7 +252,7 @@
 										<!-- Delete item -->
 										<form method="POST" action="?/deleteItem" use:enhance class="shrink-0">
 											<input type="hidden" name="itemId" value={item.id} />
-											<button class="p-1 text-text-muted hover:text-danger transition-colors">
+											<button class="p-1 text-text-muted transition-colors hover:text-danger">
 												<X size={14} />
 											</button>
 										</form>
@@ -265,7 +265,7 @@
 												<form method="POST" action="?/chooseVariant" use:enhance>
 													<input type="hidden" name="itemId" value={item.id} />
 													<input type="hidden" name="variantId" value={variant.id} />
-													<button class="rounded-full border border-primary/30 bg-primary/5 px-2.5 py-0.5 text-xs text-primary hover:bg-primary/15">
+													<button class="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs text-primary transition-colors hover:bg-primary/20">
 														{variant.nameHe || variant.name}
 													</button>
 												</form>
@@ -294,7 +294,7 @@
 						await update();
 					};
 				}}
-				class="flex flex-col gap-2 rounded-lg border border-primary bg-white p-3"
+				class="glass-card border-primary/30 p-3 space-y-2"
 			>
 				<input type="hidden" name="ingredientId" value={selectedIngredient.id} />
 				<input type="hidden" name="name" value={selectedIngredient.nameHe || selectedIngredient.name} />
@@ -317,22 +317,19 @@
 						step="0.25"
 						min="0"
 						placeholder="כמות"
-						class="w-20 rounded-lg border border-border px-2.5 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+						class="input-glass w-20"
 					/>
 					<select
 						name="unit"
 						bind:value={addUnit}
-						class="flex-1 rounded-lg border border-border px-2.5 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+						class="input-glass flex-1"
 					>
 						<option value="">ללא יחידה</option>
 						{#each unitOptions as u}
 							<option value={u}>{unitLabels[u]}</option>
 						{/each}
 					</select>
-					<button
-						type="submit"
-						class="rounded-lg bg-primary px-3 py-2 text-white transition hover:bg-primary-dark"
-					>
+					<button type="submit" class="btn-primary px-3 py-2.5">
 						<Plus size={18} />
 					</button>
 				</div>
@@ -361,12 +358,12 @@
 					onblur={() => { setTimeout(() => { showDropdown = false; }, 200); }}
 					placeholder="הוסף פריט..."
 					autocomplete="off"
-					class="flex-1 rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+					class="input-glass flex-1"
 				/>
 				<button
 					type="submit"
 					disabled={!customItemName.trim()}
-					class="rounded-lg bg-primary px-3 py-2.5 text-white transition hover:bg-primary-dark disabled:opacity-50"
+					class="btn-primary px-3 py-2.5 disabled:opacity-50"
 				>
 					<Plus size={18} />
 				</button>
@@ -374,12 +371,12 @@
 
 			<!-- Autocomplete dropdown -->
 			{#if showDropdown}
-				<div class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-lg border border-border bg-white shadow-lg">
+				<div class="glass-card absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden shadow-lg">
 					{#each searchResults as result}
 						{@const existing = getExistingItemForIngredient(result.id)}
 						<button
 							type="button"
-							class="flex w-full items-center justify-between px-3 py-2.5 text-sm hover:bg-surface-warm"
+							class="flex w-full items-center justify-between px-3 py-2.5 text-sm transition-colors hover:bg-surface-warm/30"
 							onmousedown={() => selectIngredient(result)}
 						>
 							<span>{result.nameHe || result.name}</span>
@@ -398,13 +395,13 @@
 		<div class="mt-4 flex gap-2">
 			{#if data.checkedItems > 0}
 				<form method="POST" action="?/clearChecked" use:enhance class="flex-1">
-					<button class="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-muted hover:bg-surface-warm">
+					<button class="btn-ghost w-full">
 						הסר מסומנים ({data.checkedItems})
 					</button>
 				</form>
 			{/if}
 			<form method="POST" action="?/clearAll" use:enhance class="flex-1">
-				<button class="flex w-full items-center justify-center gap-1 rounded-lg border border-danger/30 px-3 py-2 text-sm text-danger hover:bg-danger/10">
+				<button class="btn-danger flex w-full items-center justify-center gap-1">
 					<Trash2 size={14} />
 					נקה הכל
 				</button>

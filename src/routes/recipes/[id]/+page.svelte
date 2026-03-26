@@ -70,18 +70,21 @@
 	</a>
 
 	{#if data.recipe.imageUrl}
-		<img
-			src={data.recipe.imageUrl}
-			alt={data.recipe.titleHe || data.recipe.title}
-			class="mb-4 h-56 w-full rounded-xl object-cover sm:h-72"
-		/>
+		<div class="relative mb-4 overflow-hidden rounded-xl">
+			<img
+				src={data.recipe.imageUrl}
+				alt={data.recipe.titleHe || data.recipe.title}
+				class="h-56 w-full object-cover sm:h-72"
+			/>
+			<div class="absolute inset-0 bg-linear-to-t from-surface via-surface/30 to-transparent"></div>
+		</div>
 	{/if}
 
 	<div class="flex items-start justify-between gap-3">
 		<h1 class="text-2xl font-bold">{data.recipe.titleHe || data.recipe.title}</h1>
 		<div class="flex gap-1">
 			<form method="POST" action="?/toggleFavorite" use:enhance>
-				<button class="rounded-lg p-2 hover:bg-surface-warm">
+				<button class="rounded-lg p-2 transition-colors hover:bg-surface-warm/30">
 					<Heart size={20} class={data.recipe.isFavorite ? 'fill-primary text-primary' : 'text-text-muted'} />
 				</button>
 			</form>
@@ -95,7 +98,7 @@
 	<!-- Meta -->
 	<div class="mt-3 flex flex-wrap gap-3 text-sm text-text-muted">
 		{#if data.recipe.category}
-			<span class="rounded-full bg-surface-warm px-2.5 py-0.5">{categoryLabels[data.recipe.category] || data.recipe.category}</span>
+			<span class="glass-card rounded-full px-2.5 py-0.5 text-xs">{categoryLabels[data.recipe.category] || data.recipe.category}</span>
 		{/if}
 		{#if data.recipe.totalTimeMinutes}
 			<span class="flex items-center gap-1"><Clock size={14} />{formatTime(data.recipe.totalTimeMinutes)}</span>
@@ -109,11 +112,11 @@
 
 	<!-- Servings adjuster -->
 	{#if data.recipe.servings}
-		<div class="mt-4 flex items-center gap-3 rounded-lg bg-surface-warm px-4 py-2.5">
+		<div class="glass-card mt-4 flex items-center gap-3 px-4 py-2.5">
 			<span class="text-sm font-medium">מנות:</span>
-			<button onclick={() => adjustServings(-1)} class="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-white text-lg hover:bg-primary hover:text-white">−</button>
+			<button onclick={() => adjustServings(-1)} class="flex h-7 w-7 items-center justify-center rounded-full border border-border text-lg transition-all hover:border-primary hover:text-primary hover:shadow-[0_0_8px_rgba(45,212,168,0.3)]">−</button>
 			<span class="min-w-[2rem] text-center font-semibold">{currentServings}</span>
-			<button onclick={() => adjustServings(1)} class="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-white text-lg hover:bg-primary hover:text-white">+</button>
+			<button onclick={() => adjustServings(1)} class="flex h-7 w-7 items-center justify-center rounded-full border border-border text-lg transition-all hover:border-primary hover:text-primary hover:shadow-[0_0_8px_rgba(45,212,168,0.3)]">+</button>
 		</div>
 	{/if}
 
@@ -123,7 +126,7 @@
 		<ul class="space-y-2">
 			{#each data.ingredients as ing}
 				<li class="flex items-center gap-2 text-sm">
-					<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-primary"></span>
+					<span class="h-2 w-2 shrink-0 rotate-45 bg-primary"></span>
 					<span class="flex flex-1 flex-wrap items-baseline gap-1">
 						{#if ing.quantity}
 							<strong>{formatQuantity(ing.quantity)}</strong>
@@ -134,7 +137,7 @@
 						{#if ing.variants && ing.variants.length > 1}
 							<span class="relative inline-block">
 								<select
-									class="appearance-none rounded border border-border bg-surface-warm pe-5 ps-1.5 py-0.5 text-sm font-medium text-primary cursor-pointer hover:bg-primary/10 focus:border-primary focus:outline-none"
+									class="input-glass cursor-pointer appearance-none pe-5 ps-1.5 py-0.5 text-sm font-medium text-primary"
 									value={selectedVariants[ing.id] || ing.variants[0].variantId}
 									onchange={(e) => { selectedVariants[ing.id] = (e.target as HTMLSelectElement).value; }}
 								>
@@ -173,7 +176,7 @@
 							<input type="hidden" name="unit" value={ing.unit || ''} />
 							<input type="hidden" name="aisleCategoryId" value={ing.aisleCategoryId || ''} />
 							<input type="hidden" name="variantId" value={selectedVariants[ing.id] || ''} />
-							<button class="flex h-6 w-6 items-center justify-center rounded-full transition-colors {addedItems[ing.id] ? 'bg-accent text-white' : 'text-text-muted hover:bg-primary/10 hover:text-primary'}">
+							<button class="flex h-6 w-6 items-center justify-center rounded-full transition-all {addedItems[ing.id] ? 'bg-accent text-surface glow-success' : 'text-text-muted hover:bg-primary/10 hover:text-primary'}">
 								{#if addedItems[ing.id]}
 									<Check size={14} />
 								{:else}
@@ -194,7 +197,7 @@
 			<ol class="space-y-3">
 				{#each data.recipe.instructions as step, i}
 					<li class="flex gap-3 text-sm">
-						<span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">{i + 1}</span>
+						<span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-surface shadow-[0_0_10px_rgba(45,212,168,0.3)]">{i + 1}</span>
 						<p class="pt-0.5">{step}</p>
 					</li>
 				{/each}
@@ -204,15 +207,15 @@
 
 	<!-- Actions -->
 	<div class="mt-8 flex gap-3 border-t border-border pt-4">
-		<a href="/shopping?add={data.recipe.id}" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 font-medium text-white transition hover:bg-accent/90">
+		<a href="/shopping?add={data.recipe.id}" class="btn-primary flex flex-1 items-center justify-center gap-2">
 			<ShoppingCart size={16} />
 			הוסף הכל לרשימה
 		</a>
-		<a href="/recipes/{data.recipe.id}/edit" class="rounded-lg border border-border px-4 py-2.5 text-sm text-text-muted transition hover:bg-surface-warm">
+		<a href="/recipes/{data.recipe.id}/edit" class="btn-ghost px-4 py-2.5">
 			<Pencil size={16} />
 		</a>
 		<form method="POST" action="?/delete" use:enhance={() => ({ result }) => { if (result.type === 'redirect') window.location.href = '/recipes'; }}>
-			<button class="rounded-lg border border-danger/30 px-4 py-2.5 text-sm text-danger transition hover:bg-danger/10">
+			<button class="btn-danger px-4 py-2.5">
 				<Trash2 size={16} />
 			</button>
 		</form>

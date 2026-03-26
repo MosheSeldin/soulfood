@@ -53,7 +53,7 @@
 					name="title"
 					type="text"
 					required
-					class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+					class="input-glass w-full"
 					placeholder="למשל: פסטה ברוטב עגבניות"
 				/>
 			</div>
@@ -65,7 +65,7 @@
 					id="description"
 					name="description"
 					rows="2"
-					class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+					class="input-glass w-full"
 					placeholder="תיאור קצר של המתכון..."
 				></textarea>
 			</div>
@@ -74,11 +74,7 @@
 			<div class="grid grid-cols-2 gap-3">
 				<div>
 					<label for="category" class="mb-1 block text-sm font-medium">קטגוריה</label>
-					<select
-						id="category"
-						name="category"
-						class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-					>
+					<select id="category" name="category" class="input-glass w-full">
 						<option value="">בחר</option>
 						<option value="main">מנה עיקרית</option>
 						<option value="side">תוספת</option>
@@ -91,11 +87,7 @@
 				</div>
 				<div>
 					<label for="cuisine" class="mb-1 block text-sm font-medium">מטבח</label>
-					<select
-						id="cuisine"
-						name="cuisine"
-						class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-					>
+					<select id="cuisine" name="cuisine" class="input-glass w-full">
 						<option value="">בחר</option>
 						<option value="israeli">ישראלי</option>
 						<option value="italian">איטלקי</option>
@@ -114,36 +106,15 @@
 			<div class="grid grid-cols-3 gap-3">
 				<div>
 					<label for="servings" class="mb-1 block text-sm font-medium">מנות</label>
-					<input
-						id="servings"
-						name="servings"
-						type="number"
-						min="1"
-						class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-						placeholder="4"
-					/>
+					<input id="servings" name="servings" type="number" min="1" class="input-glass w-full" placeholder="4" />
 				</div>
 				<div>
 					<label for="prepTime" class="mb-1 block text-sm font-medium">הכנה (דק')</label>
-					<input
-						id="prepTime"
-						name="prepTime"
-						type="number"
-						min="0"
-						class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-						placeholder="15"
-					/>
+					<input id="prepTime" name="prepTime" type="number" min="0" class="input-glass w-full" placeholder="15" />
 				</div>
 				<div>
 					<label for="cookTime" class="mb-1 block text-sm font-medium">בישול (דק')</label>
-					<input
-						id="cookTime"
-						name="cookTime"
-						type="number"
-						min="0"
-						class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-						placeholder="30"
-					/>
+					<input id="cookTime" name="cookTime" type="number" min="0" class="input-glass w-full" placeholder="30" />
 				</div>
 			</div>
 
@@ -157,14 +128,14 @@
 								type="text"
 								aria-label="מצרך {i + 1}"
 								bind:value={ingredientLines[i]}
-								class="flex-1 rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+								class="input-glass flex-1"
 								placeholder="למשל: 2 כוסות קמח"
 							/>
 							{#if ingredientLines.length > 1}
 								<button
 									type="button"
 									onclick={() => removeIngredient(i)}
-									class="rounded-lg p-2 text-text-muted hover:bg-surface-warm hover:text-danger"
+									class="rounded-lg p-2 text-text-muted transition-colors hover:text-danger"
 								>
 									<X size={16} />
 								</button>
@@ -175,7 +146,7 @@
 				<button
 					type="button"
 					onclick={addIngredient}
-					class="mt-2 flex items-center gap-1 text-sm text-primary hover:text-primary-dark"
+					class="mt-2 flex items-center gap-1 text-sm text-primary hover:text-primary-light"
 				>
 					<Plus size={14} />
 					הוסף מצרך
@@ -193,14 +164,14 @@
 								aria-label="שלב {i + 1}"
 								bind:value={instructionLines[i]}
 								rows="2"
-								class="flex-1 rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+								class="input-glass flex-1"
 								placeholder="שלב הכנה..."
 							></textarea>
 							{#if instructionLines.length > 1}
 								<button
 									type="button"
 									onclick={() => removeInstruction(i)}
-									class="rounded-lg p-2 text-text-muted hover:bg-surface-warm hover:text-danger"
+									class="rounded-lg p-2 text-text-muted transition-colors hover:text-danger"
 								>
 									<X size={16} />
 								</button>
@@ -211,7 +182,7 @@
 				<button
 					type="button"
 					onclick={addInstruction}
-					class="mt-2 flex items-center gap-1 text-sm text-primary hover:text-primary-dark"
+					class="mt-2 flex items-center gap-1 text-sm text-primary hover:text-primary-light"
 				>
 					<Plus size={14} />
 					הוסף שלב
@@ -222,10 +193,7 @@
 				<p class="text-sm text-danger">{form.error}</p>
 			{/if}
 
-			<button
-				type="submit"
-				class="w-full rounded-lg bg-primary px-4 py-2.5 font-medium text-white transition hover:bg-primary-dark"
-			>
+			<button type="submit" class="btn-primary w-full">
 				שמור מתכון
 			</button>
 		</div>

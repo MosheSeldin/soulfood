@@ -22,7 +22,7 @@
 		<div class="flex gap-2">
 			<a
 				href="/recipes/import"
-				class="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white transition hover:bg-primary-dark"
+				class="btn-primary flex items-center gap-1.5"
 			>
 				<Plus size={16} />
 				ייבא מתכון
@@ -32,11 +32,13 @@
 
 	{#if data.recipes.length === 0}
 		<div class="mt-12 text-center">
-			<UtensilsCrossed size={48} class="mx-auto text-border" />
-			<p class="mt-3 text-text-muted">עדיין אין מתכונים</p>
+			<div class="logo-ring mx-auto inline-flex">
+				<UtensilsCrossed size={48} class="text-text-muted" />
+			</div>
+			<p class="mt-6 text-text-muted">עדיין אין מתכונים</p>
 			<a
 				href="/recipes/import"
-				class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-dark"
+				class="btn-primary mt-3 inline-flex items-center gap-1.5"
 			>
 				<Plus size={16} />
 				הוסף מתכון ראשון
@@ -47,7 +49,7 @@
 			{#each data.recipes as recipe}
 				<a
 					href="/recipes/{recipe.id}"
-					class="group overflow-hidden rounded-xl border border-border bg-white shadow-sm transition hover:shadow-md"
+					class="glass-card glass-card-hover group overflow-hidden"
 				>
 					{#if recipe.imageUrl}
 						<img
@@ -56,12 +58,12 @@
 							class="h-40 w-full object-cover"
 						/>
 					{:else}
-						<div class="flex h-40 items-center justify-center bg-surface-warm">
-							<UtensilsCrossed size={32} class="text-border" />
+						<div class="flex h-40 items-center justify-center bg-surface-warm/30">
+							<UtensilsCrossed size={32} class="text-text-muted/40" />
 						</div>
 					{/if}
 					<div class="p-3">
-						<h3 class="font-semibold group-hover:text-primary">
+						<h3 class="font-semibold transition-colors group-hover:text-primary">
 							{recipe.titleHe || recipe.title}
 						</h3>
 						<div class="mt-1.5 flex items-center gap-3 text-xs text-text-muted">

@@ -126,7 +126,7 @@
 					type="text"
 					required
 					value={data.recipe.titleHe || data.recipe.title}
-					class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+					class="input-glass w-full"
 				/>
 			</div>
 
@@ -137,7 +137,7 @@
 					id="description"
 					name="description"
 					rows="2"
-					class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+					class="input-glass w-full"
 				>{data.recipe.description || ''}</textarea>
 			</div>
 
@@ -149,7 +149,7 @@
 					name="imageUrl"
 					type="url"
 					value={data.recipe.imageUrl || ''}
-					class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+					class="input-glass w-full"
 				/>
 			</div>
 
@@ -157,11 +157,7 @@
 			<div class="grid grid-cols-2 gap-3">
 				<div>
 					<label for="category" class="mb-1 block text-sm font-medium">קטגוריה</label>
-					<select
-						id="category"
-						name="category"
-						class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-					>
+					<select id="category" name="category" class="input-glass w-full">
 						<option value="">בחר</option>
 						{#each Object.entries(categoryLabels) as [val, label]}
 							<option value={val} selected={data.recipe.category === val}>{label}</option>
@@ -170,11 +166,7 @@
 				</div>
 				<div>
 					<label for="cuisine" class="mb-1 block text-sm font-medium">מטבח</label>
-					<select
-						id="cuisine"
-						name="cuisine"
-						class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-					>
+					<select id="cuisine" name="cuisine" class="input-glass w-full">
 						<option value="">בחר</option>
 						<option value="israeli" selected={data.recipe.cuisine === 'israeli'}>ישראלי</option>
 						<option value="italian" selected={data.recipe.cuisine === 'italian'}>איטלקי</option>
@@ -193,36 +185,15 @@
 			<div class="grid grid-cols-3 gap-3">
 				<div>
 					<label for="servings" class="mb-1 block text-sm font-medium">מנות</label>
-					<input
-						id="servings"
-						name="servings"
-						type="number"
-						min="1"
-						value={data.recipe.servings || ''}
-						class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-					/>
+					<input id="servings" name="servings" type="number" min="1" value={data.recipe.servings || ''} class="input-glass w-full" />
 				</div>
 				<div>
 					<label for="prepTime" class="mb-1 block text-sm font-medium">הכנה (דק')</label>
-					<input
-						id="prepTime"
-						name="prepTime"
-						type="number"
-						min="0"
-						value={data.recipe.prepTimeMinutes || ''}
-						class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-					/>
+					<input id="prepTime" name="prepTime" type="number" min="0" value={data.recipe.prepTimeMinutes || ''} class="input-glass w-full" />
 				</div>
 				<div>
 					<label for="cookTime" class="mb-1 block text-sm font-medium">בישול (דק')</label>
-					<input
-						id="cookTime"
-						name="cookTime"
-						type="number"
-						min="0"
-						value={data.recipe.cookTimeMinutes || ''}
-						class="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-					/>
+					<input id="cookTime" name="cookTime" type="number" min="0" value={data.recipe.cookTimeMinutes || ''} class="input-glass w-full" />
 				</div>
 			</div>
 
@@ -231,32 +202,26 @@
 				<p class="mb-2 block text-sm font-medium">מצרכים</p>
 				<div class="space-y-3">
 					{#each ingredientRows as row, i}
-						<div class="rounded-lg border border-border bg-white p-3">
+						<div class="glass-card p-3">
 							<div class="flex gap-2">
-								<!-- Quantity -->
 								<input
 									type="number"
 									step="0.25"
 									min="0"
 									placeholder="כמות"
 									bind:value={ingredientRows[i].quantity}
-									class="w-16 rounded border border-border px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
+									class="input-glass w-16 px-2 py-1.5"
 								/>
-								<!-- Unit -->
-								<select
-									bind:value={ingredientRows[i].unit}
-									class="w-20 rounded border border-border px-1 py-1.5 text-sm focus:border-primary focus:outline-none"
-								>
+								<select bind:value={ingredientRows[i].unit} class="input-glass w-20 px-1 py-1.5">
 									{#each unitOptions as opt}
 										<option value={opt.value}>{opt.label}</option>
 									{/each}
 								</select>
-								<!-- Ingredient name -->
 								<input
 									type="text"
 									placeholder="שם המצרך"
 									bind:value={ingredientRows[i].name}
-									class="flex-1 rounded border border-border px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
+									class="input-glass flex-1 px-2 py-1.5"
 								/>
 								{#if ingredientRows.length > 1}
 									<button
@@ -275,7 +240,7 @@
 									type="text"
 									placeholder="הכנה (קצוץ, מומס...)"
 									bind:value={ingredientRows[i].preparation}
-									class="flex-1 rounded border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+									class="input-glass flex-1 px-2 py-1.5 text-xs"
 								/>
 								<label class="flex items-center gap-1 text-xs text-text-muted">
 									<input
@@ -297,7 +262,7 @@
 												type="text"
 												placeholder="שם החלופה"
 												bind:value={ingredientRows[i].variants[vi].name}
-												class="flex-1 rounded border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
+												class="input-glass flex-1 px-2 py-1 text-xs"
 											/>
 											<button
 												type="button"
@@ -313,7 +278,7 @@
 							<button
 								type="button"
 								onclick={() => addVariant(i)}
-								class="mt-1 text-xs text-primary hover:text-primary-dark"
+								class="mt-1 text-xs text-primary hover:text-primary-light"
 							>
 								+ הוסף חלופה
 							</button>
@@ -323,7 +288,7 @@
 				<button
 					type="button"
 					onclick={addIngredient}
-					class="mt-2 flex items-center gap-1 text-sm text-primary hover:text-primary-dark"
+					class="mt-2 flex items-center gap-1 text-sm text-primary hover:text-primary-light"
 				>
 					<Plus size={14} />
 					הוסף מצרך
@@ -341,14 +306,14 @@
 								aria-label="שלב {i + 1}"
 								bind:value={instructionLines[i]}
 								rows="2"
-								class="flex-1 rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+								class="input-glass flex-1"
 								placeholder="שלב הכנה..."
 							></textarea>
 							{#if instructionLines.length > 1}
 								<button
 									type="button"
 									onclick={() => removeInstruction(i)}
-									class="rounded-lg p-2 text-text-muted hover:bg-surface-warm hover:text-danger"
+									class="rounded-lg p-2 text-text-muted transition-colors hover:text-danger"
 								>
 									<X size={16} />
 								</button>
@@ -359,7 +324,7 @@
 				<button
 					type="button"
 					onclick={addInstruction}
-					class="mt-2 flex items-center gap-1 text-sm text-primary hover:text-primary-dark"
+					class="mt-2 flex items-center gap-1 text-sm text-primary hover:text-primary-light"
 				>
 					<Plus size={14} />
 					הוסף שלב
@@ -371,16 +336,10 @@
 			{/if}
 
 			<div class="flex gap-3">
-				<button
-					type="submit"
-					class="flex-1 rounded-lg bg-primary px-4 py-2.5 font-medium text-white transition hover:bg-primary-dark"
-				>
+				<button type="submit" class="btn-primary flex-1">
 					שמור שינויים
 				</button>
-				<a
-					href="/recipes/{data.recipe.id}"
-					class="rounded-lg border border-border px-4 py-2.5 text-sm text-text-muted transition hover:bg-surface-warm"
-				>
+				<a href="/recipes/{data.recipe.id}" class="btn-ghost px-4 py-2.5">
 					ביטול
 				</a>
 			</div>

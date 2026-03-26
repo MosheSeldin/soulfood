@@ -12,11 +12,11 @@
 	<meta name="description" content="ניהול מתכונים ורשימות קניות חכמות" />
 </svelte:head>
 
-<div class="flex min-h-dvh">
+<div class="sacred-bg flex min-h-dvh">
 	<Sidebar />
 	<div class="flex flex-1 flex-col pb-16 md:pb-0">
 		<Header />
-		<main class="flex-1 p-4">
+		<main class="flex-1 animate-fade-in p-4">
 			{@render children()}
 		</main>
 	</div>

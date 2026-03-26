@@ -11,20 +11,20 @@
 	];
 </script>
 
-<aside class="hidden md:flex md:w-56 md:flex-col md:border-l md:border-border md:bg-white">
+<aside class="hidden md:flex md:w-56 md:flex-col md:border-l md:border-border md:bg-surface-warm/50 md:backdrop-blur-xl">
 	<a href="/" class="flex items-center gap-2 border-b border-border px-4 py-4">
 		<UtensilsCrossed size={24} class="text-primary" />
-		<span class="text-lg font-bold text-primary">Soul Food</span>
+		<span class="font-heading text-lg font-bold text-primary brand-glow">Soul Food</span>
 	</a>
 	<nav class="flex flex-1 flex-col gap-1 p-2">
 		{#each links as link}
+			{@const active = page.url.pathname === link.href || page.url.pathname.startsWith(link.href + '/')}
 			<a
 				href={link.href}
-				class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors {page
-					.url.pathname === link.href ||
-				page.url.pathname.startsWith(link.href + '/')
-					? 'bg-primary/10 text-primary font-semibold'
-					: 'text-text-muted hover:bg-surface-warm'}"
+				class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors
+					{active
+						? 'border-e-2 border-primary bg-primary/10 text-primary font-semibold'
+						: 'text-text-muted hover:bg-surface-warm hover:text-text'}"
 			>
 				<link.icon size={18} />
 				<span>{link.label}</span>

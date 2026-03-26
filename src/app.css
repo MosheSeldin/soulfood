@@ -1,20 +1,37 @@
 @import 'tailwindcss';
 
 @theme {
+	/* Typography */
 	--font-sans: 'Heebo', sans-serif;
-	--color-primary: #c45d3e;
-	--color-primary-light: #d4785e;
-	--color-primary-dark: #a34a2f;
-	--color-surface: #faf7f2;
-	--color-surface-warm: #f5efe6;
-	--color-text: #2d1810;
-	--color-text-muted: #6b5c54;
-	--color-accent: #5a7247;
-	--color-accent-light: #7a9467;
-	--color-checked: #b8b0a8;
-	--color-border: #e0d8cf;
-	--color-danger: #c0392b;
+	--font-heading: 'Outfit', 'Heebo', sans-serif;
+
+	/* Primary — Emerald-teal (Heart Chakra) */
+	--color-primary: #2dd4a8;
+	--color-primary-light: #5eead4;
+	--color-primary-dark: #14b894;
+
+	/* Secondary — Sky blue accent */
+	--color-secondary: #38bdf8;
+
+	/* Surfaces — Deep navy */
+	--color-surface: #0f1729;
+	--color-surface-warm: #162032;
+
+	/* Text */
+	--color-text: #e8f0f8;
+	--color-text-muted: #7b8fa6;
+
+	/* Accents */
+	--color-accent: #34d399;
+	--color-accent-light: #6ee7b7;
+	--color-checked: #4a5e74;
+
+	/* Structural */
+	--color-border: rgba(45, 212, 168, 0.15);
+	--color-danger: #f87171;
 }
+
+/* ── Base ────────────────────────────────────────── */
 
 html {
 	background-color: var(--color-surface);
@@ -26,8 +43,227 @@ body {
 	min-height: 100dvh;
 }
 
-/* Smooth checkbox transitions */
+/* ── Sacred Geometry Backgrounds ─────────────────── */
+
+.sacred-bg {
+	background-image:
+		radial-gradient(circle at 50% 50%, rgba(45, 212, 168, 0.04) 0%, transparent 50%),
+		radial-gradient(circle at 0% 0%, rgba(45, 212, 168, 0.025) 0%, transparent 40%),
+		radial-gradient(circle at 100% 0%, rgba(56, 189, 248, 0.025) 0%, transparent 40%),
+		radial-gradient(circle at 50% 100%, rgba(45, 212, 168, 0.025) 0%, transparent 40%);
+	background-size: 200px 200px, 150px 150px, 150px 150px, 150px 150px;
+}
+
+.sacred-mandala {
+	position: relative;
+}
+.sacred-mandala::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	background-image:
+		radial-gradient(circle at center, transparent 30px, rgba(45, 212, 168, 0.06) 31px, transparent 33px),
+		radial-gradient(circle at center, transparent 65px, rgba(45, 212, 168, 0.045) 66px, transparent 68px),
+		radial-gradient(circle at center, transparent 100px, rgba(45, 212, 168, 0.035) 101px, transparent 103px),
+		radial-gradient(circle at center, transparent 135px, rgba(45, 212, 168, 0.025) 136px, transparent 138px),
+		radial-gradient(circle at center, transparent 170px, rgba(56, 189, 248, 0.025) 171px, transparent 173px),
+		radial-gradient(circle at center, transparent 210px, rgba(45, 212, 168, 0.015) 211px, transparent 213px);
+	pointer-events: none;
+	z-index: 0;
+}
+
+/* ── Glassmorphism Cards ─────────────────────────── */
+
+.glass-card {
+	background: rgba(30, 48, 74, 0.55);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	border: 1px solid rgba(45, 212, 168, 0.12);
+	border-radius: 1rem;
+	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+@supports not (backdrop-filter: blur(12px)) {
+	.glass-card {
+		background: #1e304a;
+	}
+}
+
+.glass-card-hover {
+	transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+}
+.glass-card-hover:hover {
+	border-color: rgba(45, 212, 168, 0.25);
+	box-shadow: 0 8px 32px rgba(45, 212, 168, 0.1), 0 4px 24px rgba(0, 0, 0, 0.2);
+	transform: translateY(-1px);
+}
+
+/* ── Input System ────────────────────────────────── */
+
+.input-glass {
+	background: rgba(15, 23, 41, 0.6);
+	border: 1px solid rgba(45, 212, 168, 0.15);
+	color: var(--color-text);
+	border-radius: 0.5rem;
+	padding: 0.625rem 0.75rem;
+	font-size: 0.875rem;
+	transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input-glass:focus {
+	border-color: var(--color-primary);
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(45, 212, 168, 0.15);
+}
+.input-glass::placeholder {
+	color: var(--color-text-muted);
+}
+
+select.input-glass {
+	appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%237b8fa6' viewBox='0 0 16 16'%3E%3Cpath d='M4.646 6.146a.5.5 0 0 1 .708 0L8 8.793l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: left 0.5rem center;
+	padding-inline-start: 2rem;
+}
+
+/* ── Button System ───────────────────────────────── */
+
+.btn-primary {
+	background: linear-gradient(135deg, #2dd4a8, #14b894);
+	color: #0f1729;
+	font-weight: 600;
+	border-radius: 0.5rem;
+	padding: 0.625rem 1rem;
+	font-size: 0.875rem;
+	transition: box-shadow 0.3s, transform 0.15s;
+	border: none;
+	cursor: pointer;
+}
+.btn-primary:hover {
+	box-shadow: 0 0 20px rgba(45, 212, 168, 0.35);
+	transform: translateY(-1px);
+}
+.btn-primary:active {
+	transform: scale(0.97);
+}
+
+.btn-ghost {
+	background: transparent;
+	border: 1px solid rgba(45, 212, 168, 0.2);
+	color: var(--color-text-muted);
+	border-radius: 0.5rem;
+	padding: 0.625rem 1rem;
+	font-size: 0.875rem;
+	transition: border-color 0.2s, color 0.2s;
+	cursor: pointer;
+}
+.btn-ghost:hover {
+	border-color: var(--color-primary);
+	color: var(--color-text);
+}
+
+.btn-danger {
+	background: transparent;
+	border: 1px solid rgba(248, 113, 113, 0.3);
+	color: var(--color-danger);
+	border-radius: 0.5rem;
+	padding: 0.625rem 1rem;
+	font-size: 0.875rem;
+	transition: background-color 0.2s;
+	cursor: pointer;
+}
+.btn-danger:hover {
+	background: rgba(248, 113, 113, 0.1);
+}
+
+/* ── Brand & Logo ────────────────────────────────── */
+
+.brand-glow {
+	text-shadow: 0 0 20px rgba(45, 212, 168, 0.3);
+}
+
+.logo-ring {
+	position: relative;
+	display: inline-flex;
+}
+.logo-ring::before {
+	content: '';
+	position: absolute;
+	inset: -12px;
+	border: 1px solid rgba(45, 212, 168, 0.3);
+	border-radius: 50%;
+	animation: sacred-pulse 4s ease-in-out infinite;
+}
+.logo-ring::after {
+	content: '';
+	position: absolute;
+	inset: -22px;
+	border: 1px solid rgba(45, 212, 168, 0.15);
+	border-radius: 50%;
+	animation: sacred-pulse 4s ease-in-out infinite 1s;
+}
+
+/* ── Navigation ──────────────────────────────────── */
+
+.nav-active {
+	position: relative;
+}
+.nav-active::after {
+	content: '';
+	display: block;
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: var(--color-primary);
+	box-shadow: 0 0 6px var(--color-primary);
+	margin-top: 2px;
+}
+
+/* ── Shopping List ───────────────────────────────── */
+
 .shopping-item-checked {
 	text-decoration: line-through;
 	color: var(--color-checked);
+	transition: color 0.3s, opacity 0.3s;
+	opacity: 0.6;
+}
+
+/* ── Animations ──────────────────────────────────── */
+
+@keyframes sacred-pulse {
+	0%, 100% { opacity: 0.5; }
+	50% { opacity: 1; }
+}
+
+@keyframes fadeIn {
+	from { opacity: 0; transform: translateY(4px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glowPulse {
+	0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
+	70% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+	100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+.glow-success {
+	animation: glowPulse 0.6s ease-out;
+}
+
+.animate-fade-in {
+	animation: fadeIn 0.2s ease-out;
+}
+
+/* ── Scrollbar ───────────────────────────────────── */
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(45, 212, 168, 0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(45, 212, 168, 0.4); }
+
+/* ── Accessibility ───────────────────────────────── */
+
+*:focus-visible {
+	outline: 2px solid var(--color-primary);
+	outline-offset: 2px;
 }
