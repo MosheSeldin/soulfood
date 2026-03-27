@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { shoppingLists, shoppingListItems, ingredients } from '$lib/server/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { generateId } from '$lib/utils/helpers';
 
 /** Get or create the active shopping list, returns its ID */
@@ -28,14 +28,19 @@ export async function addIngredientToShoppingList(opts: {
 }): Promise<void> {
 	const listId = await getOrCreateActiveShoppingList();
 
-	// Check if ingredient already on list
+	// Check if the same ingredient+variant combo is already on the list
+	const variantCondition = opts.chosenVariantId
+		? eq(shoppingListItems.chosenVariantId, opts.chosenVariantId)
+		: isNull(shoppingListItems.chosenVariantId);
+
 	const existing = await db
 		.select()
 		.from(shoppingListItems)
 		.where(
 			and(
 				eq(shoppingListItems.shoppingListId, listId),
-				eq(shoppingListItems.ingredientId, opts.ingredientId)
+				eq(shoppingListItems.ingredientId, opts.ingredientId),
+				variantCondition
 			)
 		)
 		.limit(1);
