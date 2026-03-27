@@ -372,8 +372,8 @@ export const actions: Actions = {
 		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const itemId = data.get('itemId') as string;
-		const variantId = (data.get('variantId') as string)?.trim() || null;
-		if (!itemId) return fail(400);
+		const variantId = data.get('variantId') as string;
+		if (!itemId || !variantId) return fail(400);
 		await db.update(shoppingListItems)
 			.set({ chosenVariantId: variantId })
 			.where(eq(shoppingListItems.id, itemId));

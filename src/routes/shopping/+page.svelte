@@ -191,7 +191,7 @@
 
 										<!-- Content: name -->
 										<span class="flex-1 text-sm {item.isChecked ? 'shopping-item-checked' : ''}">
-											{#if (item.variantNameHe || item.variantName) && (item.isChecked || item.availableVariants.length <= 1)}
+											{#if item.variantNameHe || item.variantName}
 												{item.variantNameHe || item.variantName}
 											{:else}
 												{item.customName || item.ingredientNameHe || item.ingredientName || ''}
@@ -258,23 +258,18 @@
 										</form>
 									</div>
 
-									<!-- Variant selector dropdown -->
-									{#if item.availableVariants.length > 1 && !item.isChecked}
-										<div class="px-4 pb-2.5">
-											<form method="POST" action="?/chooseVariant" use:enhance>
-												<input type="hidden" name="itemId" value={item.id} />
-												<select
-													name="variantId"
-													value={item.chosenVariantId || ''}
-													onchange={(e) => (e.currentTarget as HTMLSelectElement).form?.requestSubmit()}
-													class="input-glass w-full cursor-pointer appearance-none px-2 py-0.5 text-xs font-medium text-primary"
-												>
-													<option value="">כל סוג</option>
-													{#each item.availableVariants as variant}
-														<option value={variant.id}>{variant.nameHe || variant.name}</option>
-													{/each}
-												</select>
-											</form>
+									<!-- Variant selector for items with available variants but no chosen variant -->
+									{#if item.availableVariants.length > 1 && !item.chosenVariantId && !item.isChecked}
+										<div class="flex flex-wrap gap-1 px-4 pb-2">
+											{#each item.availableVariants as variant}
+												<form method="POST" action="?/chooseVariant" use:enhance>
+													<input type="hidden" name="itemId" value={item.id} />
+													<input type="hidden" name="variantId" value={variant.id} />
+													<button class="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs text-primary transition-colors hover:bg-primary/20">
+														{variant.nameHe || variant.name}
+													</button>
+												</form>
+											{/each}
 										</div>
 									{/if}
 								</div>
