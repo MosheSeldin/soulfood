@@ -149,9 +149,10 @@ async function regenerateListItems(listId: string) {
 
 	const recipeIds = listRecipeRows.map((r) => r.recipeId);
 
-	// Get all recipe ingredients with their data
+	// Get all recipe ingredients with their data (including auto-linked variants)
 	const allIngs = await db
 		.select({
+			recipeIngredientId: recipeIngredients.id,
 			recipeId: recipeIngredients.recipeId,
 			ingredientId: recipeIngredients.ingredientId,
 			quantity: recipeIngredients.quantity,
@@ -165,6 +166,25 @@ async function regenerateListItems(listId: string) {
 		.leftJoin(ingredients, eq(recipeIngredients.ingredientId, ingredients.id))
 		.where(inArray(recipeIngredients.recipeId, recipeIds));
 
+	// Load variant links for all recipe ingredients
+	const riIds = allIngs.map((i) => i.recipeIngredientId);
+	const riVariants = riIds.length > 0
+		? await db.select({
+				recipeIngredientId: recipeIngredientVariants.recipeIngredientId,
+				variantId: recipeIngredientVariants.variantId
+			})
+			.from(recipeIngredientVariants)
+			.where(inArray(recipeIngredientVariants.recipeIngredientId, riIds))
+		: [];
+
+	// Map recipeIngredientId → variantId (take first variant per ingredient)
+	const riVariantMap = new Map<string, string>();
+	for (const rv of riVariants) {
+		if (!riVariantMap.has(rv.recipeIngredientId)) {
+			riVariantMap.set(rv.recipeIngredientId, rv.variantId);
+		}
+	}
+
 	// Get servings multipliers
 	const recipeServings = new Map<string, number>();
 	for (const lr of listRecipeRows) {
@@ -174,17 +194,19 @@ async function regenerateListItems(listId: string) {
 		recipeServings.set(lr.recipeId, overrideServings / defaultServings);
 	}
 
-	// Scale quantities
+	// Scale quantities, attach auto-detected variant if present
 	const scaled = allIngs.map((ing) => {
 		const multiplier = recipeServings.get(ing.recipeId) || 1;
 		return {
+			recipeIngredientId: ing.recipeIngredientId,
 			recipeId: ing.recipeId,
 			ingredientId: ing.ingredientId,
 			name: ing.ingredientName || ing.originalText || 'מצרך',
 			nameHe: ing.ingredientNameHe,
 			quantity: ing.quantity ? ing.quantity * multiplier : null,
 			unit: ing.unit,
-			aisleCategoryId: ing.aisleCategoryId
+			aisleCategoryId: ing.aisleCategoryId,
+			chosenVariantId: riVariantMap.get(ing.recipeIngredientId) || null
 		};
 	});
 
@@ -209,7 +231,8 @@ async function regenerateListItems(listId: string) {
 			isChecked: false,
 			aisleCategoryId: item.aisleCategoryId,
 			sourceRecipes: item.sourceRecipeIds,
-			addedManually: false
+			addedManually: false,
+			chosenVariantId: item.chosenVariantId || null
 		});
 	}
 

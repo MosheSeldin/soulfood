@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Plus, Pencil, Check, X, Search, Trash2, Merge, Tag } from 'lucide-svelte';
-	import type { PageData } from './$types';
+	import { Plus, Pencil, Check, X, Search, Trash2, Merge, Tag, ScanSearch, ChevronDown } from 'lucide-svelte';
+	import type { PageData, ActionData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	let searchQuery = $state('');
 	let editingId = $state<string | null>(null);
@@ -18,6 +18,26 @@
 	let newVariantName = $state('');
 	let newVariantNameHe = $state('');
 	let collapsedIngredients = $state<Record<string, boolean>>({});
+
+	// Dedup state
+	type DupGroup = { baseKey: string; suggestedCanonicalId: string; members: { id: string; name: string; nameHe: string | null; usageCount: number }[] };
+	let dupGroups = $state<DupGroup[]>([]);
+	let dupCanonicals = $state<Record<string, string>>({});  // baseKey → chosen canonicalId
+	let detectingDups = $state(false);
+	let expandedDupGroup = $state<string | null>(null);
+
+	$effect(() => {
+		if (form?.duplicateGroups) {
+			dupGroups = form.duplicateGroups as DupGroup[];
+			dupCanonicals = Object.fromEntries(
+				(form.duplicateGroups as DupGroup[]).map((g: DupGroup) => [g.baseKey, g.suggestedCanonicalId])
+			);
+			expandedDupGroup = dupGroups[0]?.baseKey || null;
+		}
+		if (form?.mergedCount !== undefined) {
+			dupGroups = [];
+		}
+	});
 
 	let filteredIngredients = $derived(
 		data.ingredients.filter((ing) => {
@@ -79,17 +99,86 @@
 	<div class="mb-4 flex items-center justify-between">
 		<h2 class="text-xl font-bold">בנק מצרכים</h2>
 		<div class="flex items-center gap-2">
-			<a
-				href="/aisles"
-				class="btn-ghost px-3 py-1.5 text-xs"
-			>
-				ניהול מדורים
-			</a>
+			<a href="/aisles" class="btn-ghost px-3 py-1.5 text-xs">ניהול מדורים</a>
+			<form method="POST" action="?/detectDuplicates" use:enhance={() => {
+				detectingDups = true;
+				return async ({ update }) => { detectingDups = false; await update({ reset: false }); };
+			}}>
+				<button type="submit" class="btn-ghost flex items-center gap-1 px-3 py-1.5 text-xs {dupGroups.length > 0 ? 'text-orange-400' : ''}" title="זיהוי כפילויות">
+					<ScanSearch size={13} />
+					{#if dupGroups.length > 0}
+						{dupGroups.length} כפולים
+					{:else}
+						{detectingDups ? '...' : 'זיהוי כפילויות'}
+					{/if}
+				</button>
+			</form>
 			<span class="glass-card px-3 py-1 text-sm font-medium text-primary">
 				{data.ingredients.length}
 			</span>
 		</div>
 	</div>
+
+	<!-- Duplicate Groups Panel -->
+	{#if dupGroups.length > 0}
+		<div class="mb-4 rounded-xl border border-orange-500/30 bg-orange-500/5 p-3">
+			<p class="mb-2 text-xs font-semibold text-orange-400">
+				נמצאו {dupGroups.length} קבוצות של כפילויות אפשריות — מזג כל קבוצה לכדי מצרך אחד עם גרסאות
+			</p>
+			<div class="space-y-2">
+				{#each dupGroups as group (group.baseKey)}
+					<div class="glass-card p-2.5">
+						<button
+							onclick={() => { expandedDupGroup = expandedDupGroup === group.baseKey ? null : group.baseKey; }}
+							class="flex w-full items-center justify-between text-sm font-medium"
+						>
+							<span>{group.members.find(m => m.id === (dupCanonicals[group.baseKey] || group.suggestedCanonicalId))?.nameHe || group.baseKey}</span>
+							<span class="flex items-center gap-1 text-xs text-text-muted">
+								{group.members.length} מצרכים
+								<ChevronDown size={12} class="transition-transform {expandedDupGroup === group.baseKey ? 'rotate-180' : ''}" />
+							</span>
+						</button>
+
+						{#if expandedDupGroup === group.baseKey}
+							<div class="mt-2 space-y-1">
+								{#each group.members as member}
+									<label class="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 hover:bg-white/5">
+										<input
+											type="radio"
+											name="canonical_{group.baseKey}"
+											value={member.id}
+											checked={dupCanonicals[group.baseKey] === member.id || (!dupCanonicals[group.baseKey] && member.id === group.suggestedCanonicalId)}
+											onchange={() => { dupCanonicals[group.baseKey] = member.id; }}
+											class="accent-accent"
+										/>
+										<span class="flex-1 text-xs">{member.nameHe || member.name}</span>
+										{#if member.name && member.nameHe}
+											<span class="text-xs text-text-muted">{member.name}</span>
+										{/if}
+										<span class="text-xs text-text-muted">×{member.usageCount}</span>
+									</label>
+								{/each}
+
+								<form method="POST" action="?/autoMergeDuplicates" use:enhance={() => async ({ update }) => {
+									dupGroups = dupGroups.filter(g => g.baseKey !== group.baseKey);
+									await update({ reset: false });
+								}}>
+									<input type="hidden" name="canonicalId" value={dupCanonicals[group.baseKey] || group.suggestedCanonicalId} />
+									<input type="hidden" name="memberIds" value={JSON.stringify(group.members.map(m => m.id))} />
+									<button
+										type="submit"
+										class="mt-1 w-full rounded bg-orange-500/20 px-2 py-1.5 text-xs font-medium text-orange-300 hover:bg-orange-500/30 transition-colors"
+									>
+										מזג קבוצה זו
+									</button>
+								</form>
+							</div>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		</div>
+	{/if}
 
 	<!-- Search -->
 	<div class="relative mb-4">

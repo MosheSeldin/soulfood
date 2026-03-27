@@ -1,9 +1,9 @@
 import { redirect, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { recipes, recipeIngredients } from '$lib/server/db/schema';
+import { recipes, recipeIngredients, recipeIngredientVariants } from '$lib/server/db/schema';
 import { generateId } from '$lib/utils/helpers';
 import { parseIngredient } from '$lib/server/ingredients/parser';
-import { findOrCreateIngredient } from '$lib/server/ingredients/normalizer';
+import { resolveIngredient } from '$lib/server/ingredients/normalizer';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -67,10 +67,11 @@ export const actions: Actions = {
 			if (!raw) continue;
 
 			const parsed = parseIngredient(raw);
-			const ingredientId = await findOrCreateIngredient(parsed.name);
+			const { ingredientId, variantId } = await resolveIngredient(parsed.name);
 
+			const riId = generateId();
 			await db.insert(recipeIngredients).values({
-				id: generateId(),
+				id: riId,
 				recipeId,
 				ingredientId,
 				quantity: parsed.quantity,
@@ -79,6 +80,15 @@ export const actions: Actions = {
 				preparation: parsed.preparation,
 				sortOrder: i
 			});
+
+			if (variantId) {
+				await db.insert(recipeIngredientVariants).values({
+					id: generateId(),
+					recipeIngredientId: riId,
+					variantId,
+					sortOrder: 0
+				});
+			}
 		}
 
 		redirect(302, `/recipes/${recipeId}`);

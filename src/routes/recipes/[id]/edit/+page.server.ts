@@ -3,7 +3,7 @@ import { db } from '$lib/server/db';
 import { recipes, recipeIngredients, ingredients } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { generateId } from '$lib/utils/helpers';
-import { findOrCreateIngredient } from '$lib/server/ingredients/normalizer';
+import { resolveIngredient } from '$lib/server/ingredients/normalizer';
 import {
 	getVariantsForRecipeIngredients,
 	findOrCreateVariant,
@@ -127,7 +127,7 @@ export const actions: Actions = {
 			const ing = ingredientsList[i];
 			if (!ing.name?.trim()) continue;
 
-			const ingredientId = await findOrCreateIngredient(ing.name);
+			const { ingredientId, variantId: autoVariantId } = await resolveIngredient(ing.name);
 
 			const recipeIngId = generateId();
 			await db.insert(recipeIngredients).values({
@@ -142,7 +142,7 @@ export const actions: Actions = {
 				sortOrder: i
 			});
 
-			// Create variants
+			// Use explicit variants if provided; otherwise fall back to auto-detected variant
 			if (ing.variants && ing.variants.length > 0) {
 				const variantIds: string[] = [];
 				for (const v of ing.variants) {
@@ -157,6 +157,8 @@ export const actions: Actions = {
 				if (variantIds.length > 0) {
 					await setRecipeIngredientVariants(recipeIngId, variantIds);
 				}
+			} else if (autoVariantId) {
+				await setRecipeIngredientVariants(recipeIngId, [autoVariantId]);
 			}
 		}
 
