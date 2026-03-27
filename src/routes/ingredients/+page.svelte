@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Plus, Pencil, Check, X, Search, Trash2, Merge, Tag, ScanSearch, ChevronDown } from 'lucide-svelte';
+	import { Plus, Pencil, Check, X, Search, Trash2, Merge, ScanSearch, ChevronDown } from 'lucide-svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -11,15 +11,12 @@
 	let editNameHe = $state('');
 	let editAisleCategoryId = $state('');
 	let addedItems = $state<Record<string, boolean>>({});
-	let addedVariants = $state<Record<string, boolean>>({});
 	let selectedVariants = $state<Record<string, string>>({});
 	let mergingId = $state<string | null>(null);
 	let mergeTargetId = $state('');
-	let expandedVariants = $state<Record<string, boolean>>({});
 	let addingVariantFor = $state<string | null>(null);
 	let newVariantName = $state('');
 	let newVariantNameHe = $state('');
-	let collapsedIngredients = $state<Record<string, boolean>>({});
 
 	// Dedup state
 	type DupGroup = { baseKey: string; suggestedCanonicalId: string; members: { id: string; name: string; nameHe: string | null; usageCount: number }[] };
@@ -266,6 +263,48 @@
 							</div>
 						</form>
 
+						<!-- Variant management -->
+						<div class="mt-2 border-t border-border/50 pt-2 space-y-1">
+							<p class="text-xs text-text-muted mb-1">גרסאות</p>
+							{#each ing.variants as variant}
+								<div class="flex items-center gap-2 rounded px-1 py-0.5 hover:bg-white/5">
+									<span class="flex-1 text-xs">{variant.nameHe || variant.name}</span>
+									<form method="POST" action="?/deleteVariant" use:enhance={() => async ({ update }) => { await update({ reset: false }); }} class="inline">
+										<input type="hidden" name="variantId" value={variant.id} />
+										<button type="submit" class="p-0.5 text-text-muted hover:text-danger transition-colors">
+											<X size={12} />
+										</button>
+									</form>
+								</div>
+							{/each}
+							{#if addingVariantFor === ing.id}
+								<form
+									method="POST"
+									action="?/addVariant"
+									use:enhance={() => async ({ update }) => {
+										addingVariantFor = null;
+										newVariantName = '';
+										newVariantNameHe = '';
+										await update({ reset: false });
+									}}
+									class="flex items-center gap-1 pt-0.5"
+								>
+									<input type="hidden" name="ingredientId" value={ing.id} />
+									<input type="text" name="variantNameHe" bind:value={newVariantNameHe} placeholder="עברית" autofocus class="input-glass flex-1 px-1.5 py-0.5 text-xs" />
+									<input type="text" name="variantName" bind:value={newVariantName} placeholder="English" class="input-glass flex-1 px-1.5 py-0.5 text-xs" />
+									<button type="submit" class="p-0.5 text-accent"><Check size={12} /></button>
+									<button type="button" onclick={() => { addingVariantFor = null; }} class="p-0.5 text-text-muted"><X size={12} /></button>
+								</form>
+							{:else}
+								<button
+									onclick={() => { addingVariantFor = ing.id; newVariantName = ''; newVariantNameHe = ''; }}
+									class="text-xs text-text-muted hover:text-primary transition-colors"
+								>
+									+ הוסף גרסה
+								</button>
+							{/if}
+						</div>
+
 					{:else if mergingId === ing.id}
 						<!-- Merge mode -->
 						<form
@@ -310,16 +349,6 @@
 					{:else}
 						<!-- Display mode -->
 						<div class="flex items-center gap-2">
-							<button
-								onclick={() => { collapsedIngredients[ing.id] = !collapsedIngredients[ing.id]; }}
-								class="p-0.5 text-text-muted hover:text-primary transition-colors {ing.variants.length > 0 ? '' : 'invisible'}"
-								title={ing.variants.length > 0 ? (collapsedIngredients[ing.id] ? 'הרחב' : 'צמצם') : ''}
-							>
-								<svg class="w-4 h-4 transition-transform {collapsedIngredients[ing.id] ? '' : 'rotate-90'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-								</svg>
-							</button>
-
 							<div class="flex-1 min-w-0">
 								<div class="flex items-center gap-1.5 flex-wrap">
 									<span class="text-sm font-medium">{ing.nameHe || ing.name}</span>
@@ -334,75 +363,6 @@
 									{/if}
 								</div>
 
-								<!-- Expanded variants list -->
-								{#if !collapsedIngredients[ing.id] && (ing.variants.length > 0 || addingVariantFor === ing.id)}
-									<div class="mt-1.5 flex flex-col gap-1 ps-6 border-s border-primary/20">
-										{#each ing.variants as variant}
-											<div class="flex items-center gap-1 -ms-4 ps-3">
-												<div class="text-xs text-primary/70">•</div>
-												<span class="text-xs text-text-muted">{variant.nameHe || variant.name}</span>
-												<form method="POST" action="?/deleteVariant" use:enhance={() => async ({ update }) => { await update({ reset: false }); }} class="inline ms-auto">
-													<input type="hidden" name="variantId" value={variant.id} />
-													<button type="submit" class="text-text-muted hover:text-danger transition-colors">
-														<X size={10} />
-													</button>
-												</form>
-											</div>
-										{/each}
-
-										{#if addingVariantFor === ing.id}
-											<form
-												method="POST"
-												action="?/addVariant"
-												use:enhance={() => async ({ update }) => {
-													addingVariantFor = null;
-													newVariantName = '';
-													newVariantNameHe = '';
-													await update({ reset: false });
-												}}
-												class="flex items-center gap-1 -ms-4 ps-3"
-											>
-												<input type="hidden" name="ingredientId" value={ing.id} />
-												<input
-													type="text"
-													name="variantNameHe"
-													bind:value={newVariantNameHe}
-													placeholder="עברית"
-													autofocus
-													class="input-glass w-20 px-1.5 py-0.5 text-xs"
-												/>
-												<input
-													type="text"
-													name="variantName"
-													bind:value={newVariantName}
-													placeholder="English"
-													class="input-glass w-20 px-1.5 py-0.5 text-xs"
-												/>
-												<button type="submit" class="text-accent">
-													<Check size={12} />
-												</button>
-												<button type="button" onclick={() => { addingVariantFor = null; }} class="text-text-muted">
-													<X size={12} />
-												</button>
-											</form>
-										{:else if ing.variants.length > 0}
-											<button
-												onclick={() => { addingVariantFor = ing.id; newVariantName = ''; newVariantNameHe = ''; }}
-												class="text-xs text-text-muted hover:text-primary transition-colors text-start ps-4"
-											>
-												+ הוסף גרסה
-											</button>
-										{/if}
-									</div>
-								{:else if !collapsedIngredients[ing.id] && addingVariantFor !== ing.id && ing.variants.length === 0}
-									<button
-										onclick={() => { addingVariantFor = ing.id; newVariantName = ''; newVariantNameHe = ''; }}
-										class="mt-1 inline-flex items-center gap-0.5 text-xs text-text-muted hover:text-primary"
-									>
-										<Tag size={10} />
-										הוסף גרסה
-									</button>
-								{/if}
 							</div>
 
 							<!-- Action buttons -->
