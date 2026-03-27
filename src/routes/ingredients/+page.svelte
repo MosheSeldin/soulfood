@@ -11,6 +11,8 @@
 	let editNameHe = $state('');
 	let editAisleCategoryId = $state('');
 	let addedItems = $state<Record<string, boolean>>({});
+	let addedVariants = $state<Record<string, boolean>>({});
+	let selectedVariants = $state<Record<string, string>>({});
 	let mergingId = $state<string | null>(null);
 	let mergeTargetId = $state('');
 	let expandedVariants = $state<Record<string, boolean>>({});
@@ -439,6 +441,7 @@
 								<form
 									method="POST"
 									action="?/addToShoppingList"
+									class="flex items-center gap-1"
 									use:enhance={() => {
 										return async ({ result, update }) => {
 											if (result.type === 'success') {
@@ -452,7 +455,19 @@
 									<input type="hidden" name="ingredientId" value={ing.id} />
 									<input type="hidden" name="aisleCategoryId" value={ing.aisleCategoryId || ''} />
 									<input type="hidden" name="defaultUnit" value={ing.defaultUnit || ''} />
-									<button class="flex h-7 w-7 items-center justify-center rounded-full transition-all {addedItems[ing.id] ? 'bg-accent text-surface glow-success' : 'text-text-muted hover:bg-primary/10 hover:text-primary'}">
+									{#if ing.variants.length > 1}
+										<select
+											name="variantId"
+											bind:value={selectedVariants[ing.id]}
+											class="input-glass cursor-pointer appearance-none pe-4 ps-1.5 py-0.5 text-xs font-medium text-primary"
+										>
+											<option value="">כל סוג</option>
+											{#each ing.variants as v}
+												<option value={v.id}>{v.nameHe || v.name}</option>
+											{/each}
+										</select>
+									{/if}
+									<button class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition-all {addedItems[ing.id] ? 'bg-accent text-surface glow-success' : 'text-text-muted hover:bg-primary/10 hover:text-primary'}">
 										{#if addedItems[ing.id]}
 											<Check size={14} />
 										{:else}

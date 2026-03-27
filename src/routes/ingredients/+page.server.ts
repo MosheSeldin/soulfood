@@ -156,12 +156,14 @@ export const actions: Actions = {
 
 		const aisleCategoryId = (data.get('aisleCategoryId') as string)?.trim() || null;
 		const defaultUnit = (data.get('defaultUnit') as string)?.trim() || null;
+		const variantId = (data.get('variantId') as string)?.trim() || null;
 
 		await addIngredientToShoppingList({
 			ingredientId,
 			quantity: null,
 			unit: defaultUnit,
-			aisleCategoryId
+			aisleCategoryId,
+			chosenVariantId: variantId
 		});
 
 		return { addedIngredientId: ingredientId };
