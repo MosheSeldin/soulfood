@@ -3,7 +3,7 @@ import { db } from '$lib/server/db';
 import { recipes, recipeIngredients, ingredients } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { generateId } from '$lib/utils/helpers';
-import { resolveIngredient } from '$lib/server/ingredients/normalizer';
+import { resolveIngredient, createResolveMemo } from '$lib/server/ingredients/normalizer';
 import {
 	getVariantsForRecipeIngredients,
 	findOrCreateVariant,
@@ -103,64 +103,63 @@ export const actions: Actions = {
 		const totalTime =
 			prepTime && cookTime ? prepTime + cookTime : prepTime || cookTime || null;
 
-		await db
-			.update(recipes)
-			.set({
-				title,
-				description,
-				category,
-				cuisine,
-				servings,
-				prepTimeMinutes: prepTime,
-				cookTimeMinutes: cookTime,
-				totalTimeMinutes: totalTime,
-				instructions: instructionsList,
-				imageUrl,
-				updatedAt: new Date()
-			})
-			.where(eq(recipes.id, params.id));
+		await db.transaction(async (tx) => {
+			await tx
+				.update(recipes)
+				.set({
+					title,
+					description,
+					category,
+					cuisine,
+					servings,
+					prepTimeMinutes: prepTime,
+					cookTimeMinutes: cookTime,
+					totalTimeMinutes: totalTime,
+					instructions: instructionsList,
+					imageUrl,
+					updatedAt: new Date()
+				})
+				.where(eq(recipes.id, params.id));
 
-		// Replace ingredients: delete old (cascade deletes variants), insert new
-		await db.delete(recipeIngredients).where(eq(recipeIngredients.recipeId, params.id));
+			// Replace ingredients: delete old (cascade deletes variant links), insert new
+			await tx.delete(recipeIngredients).where(eq(recipeIngredients.recipeId, params.id));
 
-		for (let i = 0; i < ingredientsList.length; i++) {
-			const ing = ingredientsList[i];
-			if (!ing.name?.trim()) continue;
+			const memo = createResolveMemo();
+			for (let i = 0; i < ingredientsList.length; i++) {
+				const ing = ingredientsList[i];
+				if (!ing.name?.trim()) continue;
 
-			const { ingredientId, variantId: autoVariantId } = await resolveIngredient(ing.name);
+				const { ingredientId, variantId: autoVariantId } = await resolveIngredient(ing.name, { memo, db: tx });
 
-			const recipeIngId = generateId();
-			await db.insert(recipeIngredients).values({
-				id: recipeIngId,
-				recipeId: params.id,
-				ingredientId,
-				quantity: ing.quantity,
-				unit: ing.unit || null,
-				originalText: ing.name,
-				preparation: ing.preparation?.trim() || null,
-				isOptional: ing.isOptional || false,
-				sortOrder: i
-			});
+				const recipeIngId = generateId();
+				await tx.insert(recipeIngredients).values({
+					id: recipeIngId,
+					recipeId: params.id,
+					ingredientId,
+					quantity: ing.quantity,
+					unit: ing.unit || null,
+					originalText: ing.name,
+					preparation: ing.preparation?.trim() || null,
+					isOptional: ing.isOptional || false,
+					sortOrder: i
+				});
 
-			// Use explicit variants if provided; otherwise fall back to auto-detected variant
-			if (ing.variants && ing.variants.length > 0) {
-				const variantIds: string[] = [];
-				for (const v of ing.variants) {
-					if (!v.name?.trim()) continue;
-					const vid = await findOrCreateVariant(
-						ingredientId,
-						v.nameEn || v.name,
-						v.name
-					);
-					variantIds.push(vid);
+				// Use explicit variants if provided; otherwise fall back to auto-detected variant
+				if (ing.variants && ing.variants.length > 0) {
+					const variantIds: string[] = [];
+					for (const v of ing.variants) {
+						if (!v.name?.trim()) continue;
+						const vid = await findOrCreateVariant(ingredientId, v.nameEn || v.name, v.name, tx);
+						variantIds.push(vid);
+					}
+					if (variantIds.length > 0) {
+						await setRecipeIngredientVariants(recipeIngId, variantIds, tx);
+					}
+				} else if (autoVariantId) {
+					await setRecipeIngredientVariants(recipeIngId, [autoVariantId], tx);
 				}
-				if (variantIds.length > 0) {
-					await setRecipeIngredientVariants(recipeIngId, variantIds);
-				}
-			} else if (autoVariantId) {
-				await setRecipeIngredientVariants(recipeIngId, [autoVariantId]);
 			}
-		}
+		});
 
 		redirect(302, `/recipes/${params.id}`);
 	}

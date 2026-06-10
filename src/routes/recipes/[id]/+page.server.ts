@@ -1,9 +1,12 @@
 import { redirect, error, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { recipes, recipeIngredients, ingredients } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import {
+	recipes, recipeIngredients, ingredients,
+	recipeIngredientVariants, shoppingListRecipes, shoppingLists
+} from '$lib/server/db/schema';
+import { eq, inArray } from 'drizzle-orm';
 import { getVariantsForRecipeIngredients } from '$lib/server/ingredients/variants';
-import { addIngredientToShoppingList } from '$lib/server/shopping';
+import { addIngredientToShoppingList, reconcileList } from '$lib/server/shopping';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -82,7 +85,30 @@ export const actions: Actions = {
 
 	delete: async ({ params, locals }) => {
 		if (!locals.user) redirect(302, '/login');
-		await db.delete(recipes).where(eq(recipes.id, params.id));
+
+		const affectedLists = await db
+			.select({ id: shoppingListRecipes.shoppingListId })
+			.from(shoppingListRecipes)
+			.where(eq(shoppingListRecipes.recipeId, params.id));
+
+		await db.transaction(async (tx) => {
+			// FK enforcement is off in libsql — remove dependents explicitly.
+			const riIds = (
+				await tx.select({ id: recipeIngredients.id }).from(recipeIngredients).where(eq(recipeIngredients.recipeId, params.id))
+			).map((r) => r.id);
+			if (riIds.length > 0) {
+				await tx.delete(recipeIngredientVariants).where(inArray(recipeIngredientVariants.recipeIngredientId, riIds));
+			}
+			await tx.delete(recipeIngredients).where(eq(recipeIngredients.recipeId, params.id));
+			await tx.delete(shoppingListRecipes).where(eq(shoppingListRecipes.recipeId, params.id));
+			await tx.delete(recipes).where(eq(recipes.id, params.id));
+
+			// Keep any list this recipe was on consistent.
+			for (const listId of new Set(affectedLists.map((l) => l.id))) {
+				await reconcileList(listId, tx);
+			}
+		});
+
 		redirect(302, '/recipes');
 	}
 };

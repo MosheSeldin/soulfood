@@ -1,3 +1,4 @@
+import { dev } from '$app/environment';
 import { db } from './db';
 import { users, sessions } from './db/schema';
 import { eq } from 'drizzle-orm';
@@ -10,26 +11,45 @@ function generateId(): string {
 	return crypto.randomUUID();
 }
 
-async function hashPassword(password: string): Promise<string> {
-	const encoder = new TextEncoder();
-	const data = encoder.encode(password);
-	const hash = await crypto.subtle.digest('SHA-256', data);
-	return Array.from(new Uint8Array(hash))
-		.map((b) => b.toString(16).padStart(2, '0'))
-		.join('');
+function randomSalt(): string {
+	const bytes = crypto.getRandomValues(new Uint8Array(16));
+	return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-	const inputHash = await hashPassword(password);
-	return inputHash === hash;
+async function sha256Hex(input: string): Promise<string> {
+	const data = new TextEncoder().encode(input);
+	const hash = await crypto.subtle.digest('SHA-256', data);
+	return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Salted hash. */
+async function hashPassword(password: string, salt: string): Promise<string> {
+	return sha256Hex(`${salt}:${password}`);
+}
+
+/** Constant-time comparison of equal-length hex strings. */
+function safeEqual(a: string, b: string): boolean {
+	if (a.length !== b.length) return false;
+	let diff = 0;
+	for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+	return diff === 0;
+}
+
+export async function verifyPassword(password: string, hash: string, salt: string | null): Promise<boolean> {
+	if (salt) return safeEqual(await hashPassword(password, salt), hash);
+	// Legacy unsalted hash (pre-migration) — verify the old way; caller upgrades on success.
+	return safeEqual(await sha256Hex(password), hash);
 }
 
 export async function setupPassword(password: string): Promise<void> {
-	const hash = await hashPassword(password);
 	const allUsers = await db.select().from(users);
 	for (const user of allUsers) {
 		if (!user.passwordHash) {
-			await db.update(users).set({ passwordHash: hash }).where(eq(users.id, user.id));
+			const salt = randomSalt();
+			await db
+				.update(users)
+				.set({ passwordHash: await hashPassword(password, salt), passwordSalt: salt })
+				.where(eq(users.id, user.id));
 		}
 	}
 }
@@ -55,8 +75,17 @@ export async function login(
 	const user = allUsers.find((u) => u.name === name);
 	if (!user) return { success: false, error: 'משתמש לא נמצא' };
 
-	const valid = await verifyPassword(password, user.passwordHash);
+	const valid = await verifyPassword(password, user.passwordHash, user.passwordSalt);
 	if (!valid) return { success: false, error: 'סיסמה שגויה' };
+
+	// Upgrade legacy unsalted hashes to salted on successful login.
+	if (!user.passwordSalt) {
+		const salt = randomSalt();
+		await db
+			.update(users)
+			.set({ passwordHash: await hashPassword(password, salt), passwordSalt: salt })
+			.where(eq(users.id, user.id));
+	}
 
 	return createSession(user.id, cookies);
 }
@@ -74,7 +103,7 @@ async function createSession(
 		path: '/',
 		httpOnly: true,
 		sameSite: 'lax',
-		secure: false, // set to true in production with HTTPS
+		secure: !dev, // HTTPS-only in production
 		maxAge: SESSION_MAX_AGE
 	});
 

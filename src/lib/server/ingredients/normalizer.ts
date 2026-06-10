@@ -1,168 +1,182 @@
-import { db } from '../db';
+import { db, type Executor } from '../db';
 import { ingredients, ingredientVariants } from '../db/schema';
-import { eq, like } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 import { generateId } from '$lib/utils/helpers';
 import { findOrCreateVariant } from './variants';
 import {
-	stripIngredientModifiers,
-	extractBaseAndVariant,
-	greedyBaseCandidates
+	canonicalize,
+	computeNameKey,
+	computeVariantKey,
+	keyForString,
+	isHebrew,
+	greedyBaseCandidates,
+	stripIngredientModifiers
 } from './classifier';
+
+export type MatchType =
+	| 'memo'
+	| 'name_key'
+	| 'hebrew'
+	| 'english'
+	| 'variant_table'
+	| 'base_variant'
+	| 'greedy_base'
+	| 'created';
 
 export interface ResolvedIngredient {
 	ingredientId: string;
 	variantId?: string;
-	matchType: 'exact' | 'hebrew' | 'stripped' | 'variant_table' | 'base_variant' | 'greedy_base' | 'fuzzy' | 'created';
+	matchType: MatchType;
+}
+
+/** Per-request cache to collapse N+1 lookups during bulk inserts (one recipe import). */
+export type ResolveMemo = Map<string, ResolvedIngredient>;
+export const createResolveMemo = (): ResolveMemo => new Map();
+
+type Input = string | { name?: string | null; nameHe?: string | null };
+interface ResolveOpts {
+	memo?: ResolveMemo;
+	db?: Executor;
 }
 
 /**
- * Smart ingredient resolver.
- * Returns the canonical ingredient ID and, when detected, an auto-created variant ID.
- * Callers can use variantId to write recipeIngredientVariants records automatically.
+ * Smart, dedup-proof ingredient resolver.
+ *
+ * Identity is anchored on a language-tagged `nameKey` (see canonicalize), so the
+ * same base ingredient always maps to one canonical row regardless of language,
+ * modifiers, or which language slot the caller used. Variants ("olive" oil,
+ * "coarse" salt) are detected and linked rather than spawning duplicate bases.
+ *
+ * Pass `opts.db` to run inside a transaction; pass `opts.memo` to dedupe lookups
+ * across a bulk import.
  */
-export async function resolveIngredient(
-	name: string,
-	nameHe?: string
-): Promise<ResolvedIngredient> {
-	const normalized = normalizeName(name);
-	const lookupHe = nameHe?.trim() || null;
+export async function resolveIngredient(input: Input, opts: ResolveOpts = {}): Promise<ResolvedIngredient> {
+	const exec = opts.db ?? db;
+	const memo = opts.memo;
+	const raw = typeof input === 'string' ? { name: input, nameHe: null } : input;
+	const c = canonicalize(raw.name, raw.nameHe);
 
-	// ── Step 1: Exact match on English name ────────────────────────────────────
-	if (normalized) {
-		const exact = await db.select().from(ingredients).where(eq(ingredients.name, normalized)).limit(1);
-		if (exact.length > 0) return { ingredientId: exact[0].id, matchType: 'exact' };
+	// Nothing usable → create a bare row so callers always get an id.
+	if (!c.nameKey) {
+		const id = generateId();
+		await exec.insert(ingredients).values({ id, name: raw.name?.trim() || null, nameHe: raw.nameHe?.trim() || null });
+		return { ingredientId: id, matchType: 'created' };
 	}
 
-	// ── Step 2: Exact match on Hebrew name ─────────────────────────────────────
-	if (lookupHe) {
-		const heExact = await db.select().from(ingredients).where(eq(ingredients.nameHe, lookupHe)).limit(1);
-		if (heExact.length > 0) return { ingredientId: heExact[0].id, matchType: 'hebrew' };
-	}
+	const memoKey = `${c.nameKey}|${c.variantNameHe || c.variantName || ''}`;
+	if (memo?.has(memoKey)) return { ...memo.get(memoKey)!, matchType: 'memo' };
 
-	// Primary lookup name: prefer Hebrew, fall back to English
-	const primary = lookupHe || normalized;
+	const remember = (r: ResolvedIngredient) => {
+		memo?.set(memoKey, r);
+		return r;
+	};
 
-	// ── Step 3: Strip PREPARATION + QUALITY words, retry exact match ───────────
-	const stripped = stripIngredientModifiers(primary);
-	if (stripped && stripped !== primary) {
-		const strippedMatch = await db.select().from(ingredients)
-			.where(eq(ingredients.nameHe, stripped))
-			.limit(1);
-		if (strippedMatch.length > 0) return { ingredientId: strippedMatch[0].id, matchType: 'stripped' };
+	// Ensure a base ingredient row exists for key `c.nameKey`, return its id.
+	const findOrCreateBase = async (): Promise<string> => {
+		// 1. canonical key
+		const byKey = await exec.select().from(ingredients).where(eq(ingredients.nameKey, c.nameKey)).limit(1);
+		if (byKey.length > 0) return byKey[0].id;
 
-		// Also try English stripped form
-		const strippedEn = stripIngredientModifiers(normalized);
-		if (strippedEn && strippedEn !== normalized) {
-			const strippedEnMatch = await db.select().from(ingredients)
-				.where(eq(ingredients.name, strippedEn))
-				.limit(1);
-			if (strippedEnMatch.length > 0) return { ingredientId: strippedEnMatch[0].id, matchType: 'stripped' };
+		// 2/3. legacy rows that predate nameKey — match on exact he/en, then backfill the key
+		const conds = [];
+		if (c.baseNameHe) conds.push(eq(ingredients.nameHe, c.baseNameHe));
+		if (c.baseName) conds.push(eq(ingredients.name, c.baseName));
+		if (conds.length > 0) {
+			const legacy = await exec.select().from(ingredients).where(conds.length === 1 ? conds[0] : or(...conds)).limit(1);
+			if (legacy.length > 0) {
+				if (!legacy[0].nameKey) {
+					await exec.update(ingredients).set({ nameKey: c.nameKey }).where(eq(ingredients.id, legacy[0].id));
+				}
+				return legacy[0].id;
+			}
 		}
-	}
 
-	// Work with the stripped form from here on
-	const workingName = stripped || primary;
+		// 4. create
+		const id = generateId();
+		await exec.insert(ingredients).values({
+			id,
+			name: c.baseName,
+			nameHe: c.baseNameHe,
+			nameKey: c.nameKey
+		});
+		return id;
+	};
 
-	// ── Step 4: Check variant table — is the full name already a stored variant? ─
-	const asVariant = await db.select({
-		ingredientId: ingredientVariants.ingredientId,
-		variantId: ingredientVariants.id
-	})
-		.from(ingredientVariants)
-		.where(eq(ingredientVariants.nameHe, workingName))
-		.limit(1);
-	if (asVariant.length > 0) {
-		return { ingredientId: asVariant[0].ingredientId, variantId: asVariant[0].variantId, matchType: 'variant_table' };
-	}
-
-	// ── Step 5: Extract base + variant using classifier ────────────────────────
-	const { base, variant } = extractBaseAndVariant(workingName);
-	if (variant && base) {
-		const baseMatch = await db.select().from(ingredients)
-			.where(eq(ingredients.nameHe, base))
-			.limit(1);
-		if (baseMatch.length > 0) {
-			const variantId = await findOrCreateVariant(baseMatch[0].id, variant, variant);
-			return { ingredientId: baseMatch[0].id, variantId, matchType: 'base_variant' };
-		}
-	}
-
-	// ── Step 6: Greedy base lookup (remove rightmost word regardless of class) ──
-	if (workingName.includes(' ')) {
-		const candidates = greedyBaseCandidates(workingName);
-		for (const candidate of candidates) {
-			const match = await db.select().from(ingredients)
-				.where(eq(ingredients.nameHe, candidate))
+	// ── Case A: the input itself names a variant (e.g. "אורז בסמטי") ────────────
+	if (!c.variantNameHe && !c.variantName) {
+		const primary = c.baseNameHe || c.baseName;
+		const inputVariantKey = computeVariantKey(raw.name, raw.nameHe);
+		if (primary && inputVariantKey) {
+			// Is the FULL input already a stored variant? Match on the variant key
+			// (distinguishes "white onion" from "red onion"), not the base key.
+			const asVariant = await exec
+				.select({ ingredientId: ingredientVariants.ingredientId, variantId: ingredientVariants.id })
+				.from(ingredientVariants)
+				.where(
+					or(
+						eq(ingredientVariants.nameKey, inputVariantKey),
+						eq(ingredientVariants.nameHe, primary),
+						eq(ingredientVariants.name, primary)
+					)
+				)
 				.limit(1);
-			if (match.length > 0) {
-				// The removed word(s) become the variant label
-				const variantLabel = workingName.slice(candidate.length).trim();
-				const variantId = await findOrCreateVariant(match[0].id, variantLabel, variantLabel);
-				return { ingredientId: match[0].id, variantId, matchType: 'greedy_base' };
+			if (asVariant.length > 0) {
+				return remember({
+					ingredientId: asVariant[0].ingredientId,
+					variantId: asVariant[0].variantId,
+					matchType: 'variant_table'
+				});
 			}
 		}
 	}
 
-	// ── Step 7: Fuzzy fallback (strip English adjectives + LIKE) ───────────────
-	const strippedAdj = stripAdjectives(normalized);
-	if (strippedAdj && strippedAdj !== normalized) {
-		const fuzzy = await db.select().from(ingredients)
-			.where(like(ingredients.name, `%${strippedAdj}%`))
-			.limit(1);
-		if (fuzzy.length > 0) return { ingredientId: fuzzy[0].id, matchType: 'fuzzy' };
+	// ── Resolve / create the base ingredient ────────────────────────────────────
+	// Fast path: exact base already known.
+	const directKey = await exec.select().from(ingredients).where(eq(ingredients.nameKey, c.nameKey)).limit(1);
+	if (directKey.length > 0 && !c.variantNameHe && !c.variantName) {
+		return remember({ ingredientId: directKey[0].id, matchType: 'name_key' });
 	}
 
-	// ── Step 8: Create new canonical ingredient ────────────────────────────────
-	// Use the prep/quality-stripped form so we don't persist cooking instructions
-	const cleanName = stripIngredientModifiers(normalized) || normalized;
-	const cleanNameHe = lookupHe ? (stripIngredientModifiers(lookupHe) || lookupHe) : null;
+	// ── Case B: classifier detected an explicit variant word ────────────────────
+	if (c.variantNameHe || c.variantName) {
+		const ingredientId = await findOrCreateBase();
+		const variantId = await findOrCreateVariant(
+			ingredientId,
+			c.variantName || c.variantNameHe!,
+			c.variantNameHe || c.variantName!,
+			exec
+		);
+		return remember({ ingredientId, variantId, matchType: 'base_variant' });
+	}
 
-	const id = generateId();
-	await db.insert(ingredients).values({
-		id,
-		name: cleanName,
-		nameHe: cleanNameHe
-	});
-	return { ingredientId: id, matchType: 'created' };
+	// ── Case C: greedy multi-word fallback (base exists, trailing word is a variant) ─
+	const primary = c.baseNameHe || c.baseName;
+	if (primary && primary.includes(' ')) {
+		for (const candidate of greedyBaseCandidates(stripIngredientModifiers(primary) || primary)) {
+			const candKey = keyForString(candidate);
+			const match = await exec.select().from(ingredients).where(eq(ingredients.nameKey, candKey)).limit(1);
+			if (match.length > 0) {
+				const variantLabel = primary.slice(candidate.length).trim() || primary;
+				const variantId = await findOrCreateVariant(match[0].id, variantLabel, isHebrew(variantLabel) ? variantLabel : undefined, exec);
+				return remember({ ingredientId: match[0].id, variantId, matchType: 'greedy_base' });
+			}
+		}
+	}
+
+	// ── Case D: brand-new base ingredient ───────────────────────────────────────
+	const ingredientId = await findOrCreateBase();
+	const created = directKey.length === 0;
+	return remember({ ingredientId, matchType: created ? 'created' : 'name_key' });
 }
 
-/**
- * Backward-compatible wrapper — returns only the ingredient ID.
- * All existing callers can keep using this without changes.
- */
+/** Backward-compatible wrapper — returns only the ingredient ID. */
 export async function findOrCreateIngredient(
 	name: string,
-	nameHe?: string
+	nameHe?: string,
+	opts: ResolveOpts = {}
 ): Promise<string> {
-	return (await resolveIngredient(name, nameHe)).ingredientId;
+	return (await resolveIngredient(nameHe ? { name, nameHe } : name, opts)).ingredientId;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Private helpers
-// ────────────────────────────────────────────────────────────────────────────
-
-function normalizeName(name: string): string {
-	return name
-		.toLowerCase()
-		.trim()
-		.replace(/\s+/g, ' ')
-		.replace(/,.*$/, '')       // remove trailing comma text
-		.replace(/\s*\(.*?\)\s*/g, '') // remove parenthetical
-		.trim();
-}
-
-const LEGACY_ADJECTIVES = [
-	'fresh', 'dried', 'organic', 'large', 'medium', 'small',
-	'chopped', 'diced', 'minced', 'sliced', 'grated', 'shredded',
-	'ground', 'whole', 'boneless', 'skinless', 'extra-virgin',
-	'unsalted', 'salted', 'raw', 'cooked', 'frozen', 'canned',
-	'packed', 'loosely', 'firmly', 'finely', 'roughly', 'thinly', 'ripe'
-];
-
-function stripAdjectives(name: string): string {
-	let result = name;
-	for (const adj of LEGACY_ADJECTIVES) {
-		result = result.replace(new RegExp(`\\b${adj}\\b`, 'gi'), '');
-	}
-	return result.replace(/\s+/g, ' ').trim();
-}
+// Re-export the key helper so callers/migrations import from one place.
+export { computeNameKey, canonicalize } from './classifier';

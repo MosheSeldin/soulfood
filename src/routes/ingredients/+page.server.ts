@@ -6,14 +6,26 @@ import {
 	ingredientVariants,
 	recipeIngredients,
 	pantryItems,
-	shoppingListItems
+	shoppingListItems,
+	shoppingLists
 } from '$lib/server/db/schema';
 import { eq, sql } from 'drizzle-orm';
-import { addIngredientToShoppingList } from '$lib/server/shopping';
+import { addIngredientToShoppingList, reconcileList } from '$lib/server/shopping';
 import { generateId } from '$lib/utils/helpers';
-import { extractBaseAndVariant, stripIngredientModifiers } from '$lib/server/ingredients/classifier';
+import {
+	extractBaseAndVariant,
+	stripIngredientModifiers,
+	computeNameKey,
+	keyForString
+} from '$lib/server/ingredients/classifier';
 import { findOrCreateVariant } from '$lib/server/ingredients/variants';
+import { mergeIngredientInto } from '$lib/server/ingredients/merge';
 import type { Actions, PageServerLoad } from './$types';
+
+async function reconcileActive() {
+	const r = await db.select({ id: shoppingLists.id }).from(shoppingLists).where(eq(shoppingLists.isActive, true)).limit(1);
+	if (r[0]) await reconcileList(r[0].id);
+}
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) redirect(302, '/login');
@@ -72,7 +84,7 @@ export const actions: Actions = {
 
 		await db
 			.update(ingredients)
-			.set({ name, nameHe, aisleCategoryId })
+			.set({ name, nameHe, nameKey: computeNameKey(name, nameHe), aisleCategoryId })
 			.where(eq(ingredients.id, ingredientId));
 	},
 
@@ -89,9 +101,14 @@ export const actions: Actions = {
 
 		if ((usage?.count ?? 0) > 0) return fail(400, { error: 'ingredient in use' });
 
-		await db.delete(ingredientVariants).where(eq(ingredientVariants.ingredientId, ingredientId));
-		await db.delete(pantryItems).where(eq(pantryItems.ingredientId, ingredientId));
-		await db.delete(ingredients).where(eq(ingredients.id, ingredientId));
+		// FK enforcement is off — remove every reference explicitly so nothing dangles.
+		await db.transaction(async (tx) => {
+			await tx.delete(shoppingListItems).where(eq(shoppingListItems.ingredientId, ingredientId));
+			await tx.delete(ingredientVariants).where(eq(ingredientVariants.ingredientId, ingredientId));
+			await tx.delete(pantryItems).where(eq(pantryItems.ingredientId, ingredientId));
+			await tx.delete(ingredients).where(eq(ingredients.id, ingredientId));
+		});
+		await reconcileActive();
 	},
 
 	mergeIngredient: async ({ request, locals }) => {
@@ -102,25 +119,8 @@ export const actions: Actions = {
 
 		if (!fromId || !toId || fromId === toId) return fail(400);
 
-		// Re-point all references
-		await db
-			.update(recipeIngredients)
-			.set({ ingredientId: toId })
-			.where(eq(recipeIngredients.ingredientId, fromId));
-		await db
-			.update(pantryItems)
-			.set({ ingredientId: toId })
-			.where(eq(pantryItems.ingredientId, fromId));
-		await db
-			.update(shoppingListItems)
-			.set({ ingredientId: toId })
-			.where(eq(shoppingListItems.ingredientId, fromId));
-		await db
-			.update(ingredientVariants)
-			.set({ ingredientId: toId })
-			.where(eq(ingredientVariants.ingredientId, fromId));
-
-		await db.delete(ingredients).where(eq(ingredients.id, fromId));
+		await db.transaction((tx) => mergeIngredientInto(fromId, toId, tx));
+		await reconcileActive();
 	},
 
 	addVariant: async ({ request, locals }) => {
@@ -132,12 +132,7 @@ export const actions: Actions = {
 
 		if (!ingredientId || !variantName) return fail(400);
 
-		await db.insert(ingredientVariants).values({
-			id: generateId(),
-			ingredientId,
-			name: variantName.toLowerCase(),
-			nameHe: variantNameHe || null
-		});
+		await findOrCreateVariant(ingredientId, variantName, variantNameHe || undefined);
 	},
 
 	deleteVariant: async ({ request, locals }) => {
@@ -184,7 +179,7 @@ export const actions: Actions = {
 		// Group by extracted base name
 		const groups = new Map<string, typeof allIngs>();
 		for (const ing of allIngs) {
-			const lookupName = ing.nameHe || ing.name;
+			const lookupName = ing.nameHe || ing.name || '';
 			const cleaned = stripIngredientModifiers(lookupName);
 			const { base } = extractBaseAndVariant(cleaned || lookupName);
 			const key = base.trim().toLowerCase();
@@ -199,8 +194,8 @@ export const actions: Actions = {
 				// Auto-select canonical: prefer the one whose name equals the base key (no modifier),
 				// then by highest usage count
 				const sorted = [...members].sort((a, b) => {
-					const aIsBase = (a.nameHe || a.name).toLowerCase() === baseKey ? 1 : 0;
-					const bIsBase = (b.nameHe || b.name).toLowerCase() === baseKey ? 1 : 0;
+					const aIsBase = (a.nameHe || a.name || '').toLowerCase() === baseKey ? 1 : 0;
+					const bIsBase = (b.nameHe || b.name || '').toLowerCase() === baseKey ? 1 : 0;
 					if (aIsBase !== bIsBase) return bIsBase - aIsBase;
 					return b.usageCount - a.usageCount;
 				});
@@ -232,34 +227,20 @@ export const actions: Actions = {
 		const fromIds = memberIds.filter((id) => id !== canonicalId);
 		if (fromIds.length === 0) return fail(400);
 
-		for (const fromId of fromIds) {
-			// Fetch the ingredient being merged so we can create a variant from its name
-			const [from] = await db.select().from(ingredients).where(eq(ingredients.id, fromId)).limit(1);
-			if (!from) continue;
-
-			// Re-point all FK references
-			await db.update(recipeIngredients).set({ ingredientId: canonicalId }).where(eq(recipeIngredients.ingredientId, fromId));
-			await db.update(pantryItems).set({ ingredientId: canonicalId }).where(eq(pantryItems.ingredientId, fromId));
-			await db.update(shoppingListItems).set({ ingredientId: canonicalId }).where(eq(shoppingListItems.ingredientId, fromId));
-			await db.update(ingredientVariants).set({ ingredientId: canonicalId }).where(eq(ingredientVariants.ingredientId, fromId));
-
-			// Promote the merged ingredient's name as a variant of the canonical
-			const variantLabel = from.nameHe || from.name;
-			await findOrCreateVariant(canonicalId, from.name, from.nameHe || undefined);
-
-			// Update shoppingListItems that were re-pointed: try to set chosenVariantId
-			// by looking up the variant we just created
-			const createdVariant = await db.select().from(ingredientVariants)
-				.where(eq(ingredientVariants.nameHe, variantLabel))
-				.limit(1);
-			if (createdVariant.length > 0) {
-				await db.update(shoppingListItems)
-					.set({ chosenVariantId: createdVariant[0].id })
-					.where(eq(shoppingListItems.ingredientId, canonicalId));
+		// Promote each duplicate's distinctive name as a VARIANT of the canonical,
+		// then re-point + collapse safely (no blanket chosenVariantId clobber).
+		await db.transaction(async (tx) => {
+			for (const fromId of fromIds) {
+				const [from] = await tx.select().from(ingredients).where(eq(ingredients.id, fromId)).limit(1);
+				if (!from) continue;
+				const label = from.nameHe || from.name;
+				if (label) {
+					await findOrCreateVariant(canonicalId, from.name || label, from.nameHe || undefined, tx);
+				}
+				await mergeIngredientInto(fromId, canonicalId, tx);
 			}
-
-			await db.delete(ingredients).where(eq(ingredients.id, fromId));
-		}
+		});
+		await reconcileActive();
 
 		return { mergedCount: fromIds.length };
 	}

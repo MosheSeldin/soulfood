@@ -1,44 +1,53 @@
-import { db } from '../db';
+import { db, type Executor } from '../db';
 import { ingredientVariants, recipeIngredientVariants } from '../db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { generateId } from '$lib/utils/helpers';
+import { computeVariantKey, isHebrew } from './classifier';
 
-/** Find or create a variant for a canonical ingredient */
+/**
+ * Find or create a variant for a canonical ingredient.
+ * Deduped on (ingredientId, nameKey) so the same product type never doubles up,
+ * regardless of casing/language slot.
+ */
 export async function findOrCreateVariant(
 	ingredientId: string,
 	name: string,
-	nameHe?: string
+	nameHe?: string,
+	exec: Executor = db
 ): Promise<string> {
-	const normalized = name.toLowerCase().trim();
+	const cleanName = (name || nameHe || '').trim();
+	const cleanHe = (nameHe || (isHebrew(name) ? name : ''))?.trim() || null;
+	const nameKey = computeVariantKey(cleanName, cleanHe);
 
-	const existing = await db
+	// Prefer a stable match on nameKey; fall back to legacy (ingredientId, name).
+	const existing = await exec
 		.select()
 		.from(ingredientVariants)
 		.where(
 			and(
 				eq(ingredientVariants.ingredientId, ingredientId),
-				eq(ingredientVariants.name, normalized)
+				nameKey ? eq(ingredientVariants.nameKey, nameKey) : eq(ingredientVariants.name, cleanName.toLowerCase())
 			)
 		)
 		.limit(1);
 
 	if (existing.length > 0) {
-		// Update Hebrew name if provided and missing
-		if (nameHe && !existing[0].nameHe) {
-			await db
-				.update(ingredientVariants)
-				.set({ nameHe })
-				.where(eq(ingredientVariants.id, existing[0].id));
+		const patch: Partial<typeof ingredientVariants.$inferInsert> = {};
+		if (cleanHe && !existing[0].nameHe) patch.nameHe = cleanHe;
+		if (nameKey && !existing[0].nameKey) patch.nameKey = nameKey;
+		if (Object.keys(patch).length > 0) {
+			await exec.update(ingredientVariants).set(patch).where(eq(ingredientVariants.id, existing[0].id));
 		}
 		return existing[0].id;
 	}
 
 	const id = generateId();
-	await db.insert(ingredientVariants).values({
+	await exec.insert(ingredientVariants).values({
 		id,
 		ingredientId,
-		name: normalized,
-		nameHe: nameHe || null
+		name: cleanName.toLowerCase(),
+		nameHe: cleanHe,
+		nameKey: nameKey || null
 	});
 	return id;
 }
@@ -97,16 +106,17 @@ export async function getVariantsForRecipeIngredients(
 /** Set variants for a recipe ingredient (replaces existing) */
 export async function setRecipeIngredientVariants(
 	recipeIngredientId: string,
-	variantIds: string[]
+	variantIds: string[],
+	exec: Executor = db
 ): Promise<void> {
 	// Delete existing
-	await db
+	await exec
 		.delete(recipeIngredientVariants)
 		.where(eq(recipeIngredientVariants.recipeIngredientId, recipeIngredientId));
 
 	// Insert new
 	for (let i = 0; i < variantIds.length; i++) {
-		await db.insert(recipeIngredientVariants).values({
+		await exec.insert(recipeIngredientVariants).values({
 			id: generateId(),
 			recipeIngredientId,
 			variantId: variantIds[i],

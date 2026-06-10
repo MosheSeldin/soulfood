@@ -189,12 +189,19 @@
 											</button>
 										</form>
 
-										<!-- Content: name -->
-										<span class="flex-1 text-sm {item.isChecked ? 'shopping-item-checked' : ''}">
-											{#if item.variantNameHe || item.variantName}
-												{item.variantNameHe || item.variantName}
-											{:else}
-												{item.customName || item.ingredientNameHe || item.ingredientName || ''}
+										<!-- Content: name + source recipes -->
+										<span class="flex flex-1 flex-col">
+											<span class="text-sm {item.isChecked ? 'shopping-item-checked' : ''}">
+												{#if item.variantNameHe || item.variantName}
+													{item.variantNameHe || item.variantName}
+												{:else}
+													{item.customName || item.ingredientNameHe || item.ingredientName || ''}
+												{/if}
+											</span>
+											{#if item.sourceRecipeNames.length > 0}
+												<span class="text-[10px] leading-tight text-text-muted/70">
+													מתוך: {item.sourceRecipeNames.join(', ')}
+												</span>
 											{/if}
 										</span>
 

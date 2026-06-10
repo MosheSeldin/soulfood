@@ -43,8 +43,8 @@
 			if (!searchQuery) return true;
 			const q = searchQuery.toLowerCase();
 			return (
-				ing.name.toLowerCase().includes(q) ||
-				(ing.nameHe?.toLowerCase().includes(q)) ||
+				(ing.name?.toLowerCase().includes(q) ?? false) ||
+				(ing.nameHe?.toLowerCase().includes(q) ?? false) ||
 				ing.variants.some(v => v.name.includes(q) || (v.nameHe?.includes(q) ?? false))
 			);
 		})
@@ -72,7 +72,7 @@
 
 	function startEdit(ing: typeof data.ingredients[0]) {
 		editingId = ing.id;
-		editName = ing.name;
+		editName = ing.name ?? '';
 		editNameHe = ing.nameHe || '';
 		editAisleCategoryId = ing.aisleCategoryId || '';
 		mergingId = null;

@@ -177,3 +177,115 @@ export function greedyBaseCandidates(name: string): string[] {
 	}
 	return candidates;
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Canonical identity key
+// ────────────────────────────────────────────────────────────────────────────
+
+/** True if the string contains any Hebrew letter. */
+export function isHebrew(s: string | null | undefined): boolean {
+	return !!s && /[א-ת]/.test(s);
+}
+
+/** Lowercase, collapse whitespace, drop a stray leading quantity, comma text + parentheticals. */
+function normalizeRaw(name: string): string {
+	return name
+		.toLowerCase()
+		.trim()
+		.replace(/\s+/g, ' ')
+		.replace(/,.*$/, '')
+		.replace(/\s*\(.*?\)\s*/g, '')
+		// strip a leading quantity token (digits / fractions) that slipped past the parser
+		.replace(/^[\d.,/\s¼½¾⅓⅔⅛⅜⅝⅞-]+/, '')
+		.trim();
+}
+
+/**
+ * Compute a stable, language-tagged canonical key for an ingredient.
+ *
+ * This is THE deduplication primitive: two ingredient strings that denote the
+ * same base product must produce the same key. Hebrew is preferred when present
+ * (the app is Hebrew-first), so a clean bilingual row {name:"onion", nameHe:"בצל"}
+ * and a Hebrew-only row {name:"בצל"} collapse to the same key ("he:בצל").
+ *
+ * Returns "" only when no usable name is given.
+ */
+export function computeNameKey(name?: string | null, nameHe?: string | null): string {
+	const he = (nameHe && nameHe.trim()) || (isHebrew(name) ? name!.trim() : '');
+	const en = !isHebrew(name) ? (name?.trim() || '') : '';
+	const primary = he || en;
+	if (!primary) return '';
+	const lang = he ? 'he' : 'en';
+	const normalized = normalizeRaw(primary);
+	const stripped = stripIngredientModifiers(normalized) || normalized;
+	const { base } = extractBaseAndVariant(stripped);
+	return `${lang}:${(base || stripped).trim()}`;
+}
+
+/**
+ * Split a single user-typed/parsed name into the correct {name, nameHe} fields
+ * by detecting its language. Used by callers that only have one string.
+ */
+export function splitByLanguage(raw: string): { name: string | null; nameHe: string | null } {
+	const trimmed = raw.trim();
+	if (!trimmed) return { name: null, nameHe: null };
+	return isHebrew(trimmed) ? { name: null, nameHe: trimmed } : { name: trimmed, nameHe: null };
+}
+
+/** Language-tagged key for a single raw string (auto-detects he/en). */
+export function keyForString(raw: string): string {
+	return isHebrew(raw) ? computeNameKey(null, raw) : computeNameKey(raw, null);
+}
+
+/**
+ * Key for a VARIANT (distinct product type within one ingredient), e.g. "white"
+ * vs "red" onion, "olive" vs "canola" oil. Unlike computeNameKey it does NOT
+ * collapse to the base — it keeps the full normalized label (prep/quality words
+ * still stripped) so different variants of the same base stay distinct.
+ */
+export function computeVariantKey(name?: string | null, nameHe?: string | null): string {
+	const he = (nameHe && nameHe.trim()) || (isHebrew(name) ? name!.trim() : '');
+	const en = !isHebrew(name) ? (name?.trim() || '') : '';
+	const primary = he || en;
+	if (!primary) return '';
+	const lang = he ? 'he' : 'en';
+	const normalized = normalizeRaw(primary);
+	return `${lang}:${stripIngredientModifiers(normalized) || normalized}`;
+}
+
+export interface Canonical {
+	/** Base ingredient identity fields (Hebrew never stored in `name`). */
+	baseName: string | null;
+	baseNameHe: string | null;
+	/** Canonical key for the BASE ingredient (the uniqueness anchor). */
+	nameKey: string;
+	/** Detected variant label, if the input named a specific product type. */
+	variantName: string | null;
+	variantNameHe: string | null;
+}
+
+/**
+ * Decompose any {name?, nameHe?} (or messy single value) into clean base
+ * ingredient fields + an optional variant, using the word classifier. This is
+ * the single source of truth shared by the resolver and the data migration.
+ */
+export function canonicalize(name?: string | null, nameHe?: string | null): Canonical {
+	let nm = name?.trim() || null;
+	let he = nameHe?.trim() || null;
+	// Never keep Hebrew text in the English slot.
+	if (nm && isHebrew(nm)) {
+		he = he || nm;
+		nm = null;
+	}
+	const enParts = nm ? extractBaseAndVariant(stripIngredientModifiers(normalizeRaw(nm)) || normalizeRaw(nm)) : null;
+	const heParts = he ? extractBaseAndVariant(stripIngredientModifiers(normalizeRaw(he)) || normalizeRaw(he)) : null;
+	const baseName = enParts?.base || null;
+	const baseNameHe = heParts?.base || null;
+	return {
+		baseName,
+		baseNameHe,
+		nameKey: computeNameKey(baseName, baseNameHe),
+		variantName: enParts?.variant || null,
+		variantNameHe: heParts?.variant || null
+	};
+}

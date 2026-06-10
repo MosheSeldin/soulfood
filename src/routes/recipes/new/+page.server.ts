@@ -3,7 +3,7 @@ import { db } from '$lib/server/db';
 import { recipes, recipeIngredients, recipeIngredientVariants } from '$lib/server/db/schema';
 import { generateId } from '$lib/utils/helpers';
 import { parseIngredient } from '$lib/server/ingredients/parser';
-import { resolveIngredient } from '$lib/server/ingredients/normalizer';
+import { resolveIngredient, createResolveMemo } from '$lib/server/ingredients/normalizer';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -55,55 +55,58 @@ export const actions: Actions = {
 		const totalTime =
 			prepTime && cookTime ? prepTime + cookTime : prepTime || cookTime || null;
 
-		await db.insert(recipes).values({
-			id: recipeId,
-			title,
-			titleHe,
-			description,
-			sourceUrl,
-			sourceType,
-			imageUrl,
-			servings,
-			prepTimeMinutes: prepTime,
-			cookTimeMinutes: cookTime,
-			totalTimeMinutes: totalTime,
-			instructions,
-			tags: [],
-			category,
-			cuisine,
-			isFavorite: false,
-			createdBy: locals.user.userId
-		});
-
-		// Parse and save ingredients
-		for (let i = 0; i < ingredientsList.length; i++) {
-			const raw = ingredientsList[i].trim();
-			if (!raw) continue;
-
-			const parsed = parseIngredient(raw);
-			const { ingredientId, variantId } = await resolveIngredient(parsed.name);
-
-			const riId = generateId();
-			await db.insert(recipeIngredients).values({
-				id: riId,
-				recipeId,
-				ingredientId,
-				quantity: parsed.quantity,
-				unit: parsed.unit,
-				originalText: parsed.original,
-				preparation: parsed.preparation,
-				sortOrder: i
+		await db.transaction(async (tx) => {
+			await tx.insert(recipes).values({
+				id: recipeId,
+				title,
+				titleHe,
+				description,
+				sourceUrl,
+				sourceType,
+				imageUrl,
+				servings,
+				prepTimeMinutes: prepTime,
+				cookTimeMinutes: cookTime,
+				totalTimeMinutes: totalTime,
+				instructions,
+				tags: [],
+				category,
+				cuisine,
+				isFavorite: false,
+				createdBy: locals.user!.userId
 			});
 
-			if (variantId) {
-				await db.insert(recipeIngredientVariants).values({
-					id: generateId(),
-					recipeIngredientId: riId,
-					variantId,
-					sortOrder: 0
+			// Parse and save ingredients (memoized resolver, all in one transaction)
+			const memo = createResolveMemo();
+			for (let i = 0; i < ingredientsList.length; i++) {
+				const raw = ingredientsList[i].trim();
+				if (!raw) continue;
+
+				const parsed = parseIngredient(raw);
+				const { ingredientId, variantId } = await resolveIngredient(parsed.name, { memo, db: tx });
+
+				const riId = generateId();
+				await tx.insert(recipeIngredients).values({
+					id: riId,
+					recipeId,
+					ingredientId,
+					quantity: parsed.quantity,
+					unit: parsed.unit,
+					originalText: parsed.original,
+					preparation: parsed.preparation,
+					sortOrder: i
 				});
+
+				if (variantId) {
+					await tx.insert(recipeIngredientVariants).values({
+						id: generateId(),
+						recipeIngredientId: riId,
+						variantId,
+						sortOrder: 0
+					});
+				}
 			}
-		}
+		});
 
 		redirect(302, `/recipes/${recipeId}`);
 	}
