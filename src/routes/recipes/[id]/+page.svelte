@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Heart, Clock, ExternalLink, Trash2, ShoppingCart, ArrowRight, Pencil, ChevronDown, Plus, Check } from 'lucide-svelte';
+	import Plate from '$lib/components/Plate.svelte';
 	import { formatTime } from '$lib/utils/helpers';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	// Track which ingredients were just added to shopping list (for visual feedback)
+	// Track which ingredients were just added to the shopping list (visual feedback)
 	let addedItems = $state<Record<string, boolean>>({});
 
 	const categoryLabels: Record<string, string> = {
 		main: 'מנה עיקרית', side: 'תוספת', soup: 'מרק', salad: 'סלט',
-		dessert: 'קינוח', breakfast: 'בוקר', snack: 'חטיף'
+		dessert: 'קינוח', breakfast: 'ארוחת בוקר', snack: 'חטיף'
 	};
 
 	let servingsMultiplier = $state(1);
@@ -22,7 +22,7 @@
 	// Track selected variant per ingredient (keyed by recipeIngredient ID)
 	let selectedVariants = $state<Record<string, string>>({});
 
-	function getDisplayName(ing: typeof data.ingredients[0]): string {
+	function getDisplayName(ing: (typeof data.ingredients)[0]): string {
 		const variants = ing.variants;
 		if (!variants || variants.length === 0) {
 			return ing.ingredientNameHe || ing.ingredientName || '';
@@ -32,7 +32,6 @@
 			const v = variants.find((v) => v.variantId === selectedId);
 			if (v) return v.nameHe || v.name;
 		}
-		// Default to first variant
 		return variants[0].nameHe || variants[0].name;
 	}
 
@@ -41,183 +40,199 @@
 		if (newVal >= 0.5) servingsMultiplier = newVal;
 	}
 
-	function formatQuantity(qty: number | null): string {
+	function frac(qty: number | null): string {
 		if (qty === null) return '';
 		const adjusted = qty * servingsMultiplier;
 		if (adjusted === Math.floor(adjusted)) return adjusted.toString();
-		// Nice fractions
-		const frac = adjusted - Math.floor(adjusted);
+		const f = adjusted - Math.floor(adjusted);
 		const whole = Math.floor(adjusted);
-		if (Math.abs(frac - 0.5) < 0.01) return whole ? `${whole}½` : '½';
-		if (Math.abs(frac - 0.25) < 0.01) return whole ? `${whole}¼` : '¼';
-		if (Math.abs(frac - 0.75) < 0.01) return whole ? `${whole}¾` : '¾';
-		if (Math.abs(frac - 0.33) < 0.05) return whole ? `${whole}⅓` : '⅓';
-		if (Math.abs(frac - 0.67) < 0.05) return whole ? `${whole}⅔` : '⅔';
+		if (Math.abs(f - 0.5) < 0.01) return whole ? `${whole}½` : '½';
+		if (Math.abs(f - 0.25) < 0.01) return whole ? `${whole}¼` : '¼';
+		if (Math.abs(f - 0.75) < 0.01) return whole ? `${whole}¾` : '¾';
+		if (Math.abs(f - 0.33) < 0.05) return whole ? `${whole}⅓` : '⅓';
+		if (Math.abs(f - 0.67) < 0.05) return whole ? `${whole}⅔` : '⅔';
 		return adjusted.toFixed(1);
 	}
 
 	const unitLabels: Record<string, string> = {
 		cup: 'כוס', tbsp: 'כף', tsp: 'כפית', g: 'גרם', kg: 'ק"ג',
-		ml: 'מ"ל', l: 'ליטר', oz: 'אונ\'', lb: 'ליברה',
-		piece: 'יח\'', clove: 'שן', package: 'חבילה', can: 'פחית', bunch: 'אגודה'
+		ml: 'מ"ל', l: 'ליטר', oz: "אונ'", lb: 'ליברה',
+		piece: "יח'", clove: 'שן', package: 'חבילה', can: 'פחית', bunch: 'אגודה'
 	};
+
+	let title = $derived(data.recipe.titleHe || data.recipe.title);
+	let metaTop = $derived(
+		[data.recipe.category ? categoryLabels[data.recipe.category] || data.recipe.category : null, data.recipe.cuisine]
+			.filter(Boolean)
+			.join(' · ')
+	);
 </script>
 
-<div class="mx-auto max-w-2xl">
-	<a href="/recipes" class="mb-3 inline-flex items-center gap-1 text-sm text-text-muted hover:text-primary">
-		<ArrowRight size={14} />
-		חזרה למתכונים
-	</a>
+<div class="page recipe fade">
+	<a class="back" href="/recipes">→ חזרה למתכונים</a>
 
-	{#if data.recipe.imageUrl}
-		<div class="relative mb-4 overflow-hidden rounded-xl">
-			<img
-				src={data.recipe.imageUrl}
-				alt={data.recipe.titleHe || data.recipe.title}
-				class="h-56 w-full object-cover sm:h-72"
-			/>
-			<div class="absolute inset-0 bg-linear-to-t from-surface via-surface/30 to-transparent"></div>
+	<div class="rec-spread">
+		<div class="rec-hero">
+			<div class="rec-plate-wrap">
+				<span class="tape tl"></span><span class="tape tr"></span>
+				<Plate caption={title} imageUrl={data.recipe.imageUrl} alt={title} class="hero-plate" />
+				<p class="plate-cap hand">{title}</p>
+			</div>
 		</div>
-	{/if}
 
-	<div class="flex items-start justify-between gap-3">
-		<h1 class="text-2xl font-bold">{data.recipe.titleHe || data.recipe.title}</h1>
-		<div class="flex gap-1">
-			<form method="POST" action="?/toggleFavorite" use:enhance>
-				<button class="rounded-lg p-2 transition-colors hover:bg-surface-warm/30">
-					<Heart size={20} class={data.recipe.isFavorite ? 'fill-primary text-primary' : 'text-text-muted'} />
-				</button>
-			</form>
+		<div class="rec-intro">
+			{#if metaTop}<p class="kicker">{metaTop}</p>{/if}
+			<h1 class="rec-h1">{title}</h1>
+			{#if data.recipe.titleHe && data.recipe.title}
+				<p class="rec-h1-lat title-script">{data.recipe.title}</p>
+			{/if}
+			<div class="rec-meta-row">
+				{#if data.recipe.totalTimeMinutes}
+					<span class="meta-pill">◷ {formatTime(data.recipe.totalTimeMinutes)}</span>
+				{/if}
+				{#if data.recipe.servings}
+					<span class="meta-pill">{data.recipe.servings} מנות</span>
+				{/if}
+				{#if data.recipe.sourceUrl}
+					<a class="meta-pill" href={data.recipe.sourceUrl} target="_blank" rel="noopener">מקור ↗</a>
+				{/if}
+				<form method="POST" action="?/toggleFavorite" use:enhance>
+					<button class="meta-fav {data.recipe.isFavorite ? 'on' : ''}" aria-label="מועדף">♥</button>
+				</form>
+			</div>
+			{#if data.recipe.description}
+				<p class="rec-desc dropcap">{data.recipe.description}</p>
+			{/if}
 		</div>
 	</div>
 
-	{#if data.recipe.description}
-		<p class="mt-2 text-sm text-text-muted">{data.recipe.description}</p>
-	{/if}
+	<div class="fleuron rec-div"><span>❧</span></div>
 
-	<!-- Meta -->
-	<div class="mt-3 flex flex-wrap gap-3 text-sm text-text-muted">
-		{#if data.recipe.category}
-			<span class="glass-card rounded-full px-2.5 py-0.5 text-xs">{categoryLabels[data.recipe.category] || data.recipe.category}</span>
-		{/if}
-		{#if data.recipe.totalTimeMinutes}
-			<span class="flex items-center gap-1"><Clock size={14} />{formatTime(data.recipe.totalTimeMinutes)}</span>
-		{/if}
-		{#if data.recipe.sourceUrl}
-			<a href={data.recipe.sourceUrl} target="_blank" rel="noopener" class="flex items-center gap-1 hover:text-primary">
-				<ExternalLink size={14} />מקור
-			</a>
-		{/if}
-	</div>
+	<div class="rec-cols">
+		<section class="col-ing">
+			<div class="col-head">
+				<h2 class="col-h2">מצרכים</h2>
+				{#if data.recipe.servings}
+					<div class="serv">
+						<button class="stamp" onclick={() => adjustServings(-1)} aria-label="פחות מנות">−</button>
+						<span class="serv-n">{frac(data.recipe.servings)}<i>מנות</i></span>
+						<button class="stamp" onclick={() => adjustServings(1)} aria-label="עוד מנות">＋</button>
+					</div>
+				{/if}
+			</div>
 
-	<!-- Servings adjuster -->
-	{#if data.recipe.servings}
-		<div class="glass-card mt-4 flex items-center gap-3 px-4 py-2.5">
-			<span class="text-sm font-medium">מנות:</span>
-			<button onclick={() => adjustServings(-1)} class="flex h-7 w-7 items-center justify-center rounded-full border border-border text-lg transition-all hover:border-primary hover:text-primary hover:shadow-[0_0_8px_rgba(45,212,168,0.3)]">−</button>
-			<span class="min-w-[2rem] text-center font-semibold">{currentServings}</span>
-			<button onclick={() => adjustServings(1)} class="flex h-7 w-7 items-center justify-center rounded-full border border-border text-lg transition-all hover:border-primary hover:text-primary hover:shadow-[0_0_8px_rgba(45,212,168,0.3)]">+</button>
-		</div>
-	{/if}
-
-	<!-- Ingredients -->
-	<div class="mt-6">
-		<h2 class="mb-3 text-lg font-bold">מצרכים</h2>
-		<ul class="space-y-2">
-			{#each data.ingredients as ing}
-				<li class="flex items-center gap-2 text-sm">
-					<span class="h-2 w-2 shrink-0 rotate-45 bg-primary"></span>
-					<span class="flex flex-1 flex-wrap items-baseline gap-1">
-						{#if ing.quantity}
-							<strong>{formatQuantity(ing.quantity)}</strong>
-						{/if}
-						{#if ing.unit}
-							{unitLabels[ing.unit] || ing.unit}
-						{/if}
-						{#if ing.variants && ing.variants.length > 1}
-							<span class="relative inline-block">
+			<ul class="ing-list ruled">
+				{#each data.ingredients as ing}
+					<li class="ing">
+						<span class="ing-q">
+							{#if ing.quantity}{frac(ing.quantity)} {ing.unit ? unitLabels[ing.unit] || ing.unit : ''}{/if}
+						</span>
+						<span class="ing-n">
+							{#if ing.variants && ing.variants.length > 1}
 								<select
-									class="input-glass cursor-pointer appearance-none pe-5 ps-1.5 py-0.5 text-sm font-medium text-primary"
+									class="ing-variant"
 									value={selectedVariants[ing.id] || ing.variants[0].variantId}
-									onchange={(e) => { selectedVariants[ing.id] = (e.target as HTMLSelectElement).value; }}
+									onchange={(e) => (selectedVariants[ing.id] = (e.target as HTMLSelectElement).value)}
 								>
 									{#each ing.variants as v}
 										<option value={v.variantId}>{v.nameHe || v.name}</option>
 									{/each}
 								</select>
-							</span>
-						{:else}
-							{getDisplayName(ing)}
+							{:else}
+								{getDisplayName(ing)}
+							{/if}
+							{#if ing.preparation}<i class="ing-prep">, {ing.preparation}</i>{/if}
+							{#if ing.isOptional}<i class="ing-prep"> (לפי הטעם)</i>{/if}
+						</span>
+						{#if ing.ingredientId}
+							<form
+								method="POST"
+								action="?/addToShoppingList"
+								style="display: contents"
+								use:enhance={() => {
+									return async ({ result, update }) => {
+										if (result.type === 'success') {
+											addedItems[ing.id] = true;
+											setTimeout(() => (addedItems[ing.id] = false), 1500);
+										}
+										await update({ reset: false });
+									};
+								}}
+							>
+								<input type="hidden" name="ingredientId" value={ing.ingredientId} />
+								<input type="hidden" name="quantity" value={ing.quantity ? ing.quantity * servingsMultiplier : ''} />
+								<input type="hidden" name="unit" value={ing.unit || ''} />
+								<input type="hidden" name="aisleCategoryId" value={ing.aisleCategoryId || ''} />
+								<input type="hidden" name="variantId" value={selectedVariants[ing.id] || ''} />
+								<button class="ing-add" title="הוסף לרשימה" aria-label="הוסף לרשימה">
+									{addedItems[ing.id] ? '✓' : '＋'}
+								</button>
+							</form>
 						{/if}
-						{#if ing.preparation}
-							<span class="text-text-muted">({ing.preparation})</span>
-						{/if}
-						{#if ing.isOptional}
-							<span class="text-text-muted">(אופציונלי)</span>
-						{/if}
-					</span>
-					{#if ing.ingredientId}
-						<form
-							method="POST"
-							action="?/addToShoppingList"
-							use:enhance={() => {
-								return async ({ result, update }) => {
-									if (result.type === 'success') {
-										addedItems[ing.id] = true;
-										setTimeout(() => { addedItems[ing.id] = false; }, 1500);
-									}
-									await update({ reset: false });
-								};
-							}}
-							class="shrink-0"
-						>
-							<input type="hidden" name="ingredientId" value={ing.ingredientId} />
-							<input type="hidden" name="quantity" value={ing.quantity ? ing.quantity * servingsMultiplier : ''} />
-							<input type="hidden" name="unit" value={ing.unit || ''} />
-							<input type="hidden" name="aisleCategoryId" value={ing.aisleCategoryId || ''} />
-							<input type="hidden" name="variantId" value={selectedVariants[ing.id] || ''} />
-							<button class="flex h-6 w-6 items-center justify-center rounded-full transition-all {addedItems[ing.id] ? 'bg-accent text-surface glow-success' : 'text-text-muted hover:bg-primary/10 hover:text-primary'}">
-								{#if addedItems[ing.id]}
-									<Check size={14} />
-								{:else}
-									<Plus size={14} />
-								{/if}
-							</button>
-						</form>
-					{/if}
-				</li>
-			{/each}
-		</ul>
-	</div>
-
-	<!-- Instructions -->
-	{#if data.recipe.instructions && data.recipe.instructions.length > 0}
-		<div class="mt-6">
-			<h2 class="mb-3 text-lg font-bold">הוראות הכנה</h2>
-			<ol class="space-y-3">
-				{#each data.recipe.instructions as step, i}
-					<li class="flex gap-3 text-sm">
-						<span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-surface shadow-[0_0_10px_rgba(45,212,168,0.3)]">{i + 1}</span>
-						<p class="pt-0.5">{step}</p>
 					</li>
 				{/each}
-			</ol>
-		</div>
-	{/if}
+			</ul>
+		</section>
 
-	<!-- Actions -->
-	<div class="mt-8 flex gap-3 border-t border-border pt-4">
-		<a href="/shopping?add={data.recipe.id}" class="btn-primary flex flex-1 items-center justify-center gap-2">
-			<ShoppingCart size={16} />
-			הוסף הכל לרשימה
-		</a>
-		<a href="/recipes/{data.recipe.id}/edit" class="btn-ghost px-4 py-2.5">
-			<Pencil size={16} />
-		</a>
-		<form method="POST" action="?/delete" use:enhance={() => ({ result }) => { if (result.type === 'redirect') window.location.href = '/recipes'; }}>
-			<button class="btn-danger px-4 py-2.5">
-				<Trash2 size={16} />
-			</button>
-		</form>
+		{#if data.recipe.instructions && data.recipe.instructions.length > 0}
+			<section class="col-method">
+				<h2 class="col-h2">אופן ההכנה</h2>
+				<ol class="step-list">
+					{#each data.recipe.instructions as step, i}
+						<li class="step">
+							<span class="step-n">{i + 1}</span>
+							<p class="step-t">{step}</p>
+						</li>
+					{/each}
+				</ol>
+			</section>
+		{/if}
+	</div>
+
+	<div class="rec-foot">
+		<div class="rec-foot-actions">
+			<a href="/shopping?add={data.recipe.id}" class="btn rubric">＋ הוסף הכול לרשימת השוק</a>
+			<a href="/recipes/{data.recipe.id}/edit" class="btn ghost">עריכה</a>
+			<form
+				method="POST"
+				action="?/delete"
+				use:enhance={() => ({ result }) => {
+					if (result.type === 'redirect') window.location.href = '/recipes';
+				}}
+			>
+				<button class="btn ghost btn-del">מחיקה</button>
+			</form>
+		</div>
+		<span class="folio">— Soul Food —</span>
 	</div>
 </div>
+
+<style>
+	.ing-variant {
+		font-family: var(--serif);
+		font-size: 1.06rem;
+		color: var(--rubric);
+		background: transparent;
+		border: 0;
+		border-bottom: 1px dashed var(--rubric);
+		padding: 0 0.1em;
+		cursor: pointer;
+	}
+	.ing-variant:focus {
+		outline: none;
+		border-bottom-style: solid;
+	}
+	.rec-foot-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.7rem;
+		flex-wrap: wrap;
+	}
+	.btn-del {
+		color: var(--color-danger);
+		border-color: rgba(168, 67, 47, 0.4);
+	}
+	.btn-del:hover {
+		background: rgba(168, 67, 47, 0.08);
+	}
+</style>

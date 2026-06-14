@@ -8,17 +8,17 @@
 </script>
 
 <svelte:head>
-	<title>Soul Food</title>
+	<title>Soul Food · ספר מתכונים</title>
 	<meta name="description" content="ניהול מתכונים ורשימות קניות חכמות" />
 </svelte:head>
 
-<div class="sacred-bg flex min-h-dvh">
+<div id="app" class="paper">
 	<Sidebar />
-	<div class="flex flex-1 flex-col pb-16 md:pb-0">
+	<div class="main-wrap">
 		<Header />
-		<main class="flex-1 animate-fade-in p-4">
+		<main class="main scroll">
 			{@render children()}
 		</main>
+		<BottomNav />
 	</div>
 </div>
-<BottomNav />

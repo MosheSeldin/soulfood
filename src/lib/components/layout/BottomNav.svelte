@@ -1,27 +1,25 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { BookOpen, ShoppingCart, Refrigerator, Egg } from 'lucide-svelte';
 
 	const links = [
-		{ href: '/recipes', label: 'מתכונים', icon: BookOpen },
-		{ href: '/shopping', label: 'קניות', icon: ShoppingCart },
-		{ href: '/pantry', label: 'מלאי', icon: Refrigerator },
-		{ href: '/ingredients', label: 'מצרכים', icon: Egg }
+		{ href: '/', he: 'השער', lat: 'Cover' },
+		{ href: '/recipes', he: 'מתכונים', lat: 'Recipes' },
+		{ href: '/shopping', he: 'קניות', lat: 'Market' },
+		{ href: '/pantry', he: 'מזווה', lat: 'Pantry' },
+		{ href: '/ingredients', he: 'מצרכים', lat: 'Ingredients' }
 	];
+
+	function isActive(href: string, pathname: string): boolean {
+		if (href === '/') return pathname === '/';
+		return pathname === href || pathname.startsWith(href + '/');
+	}
 </script>
 
-<nav class="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-surface/85 backdrop-blur-lg md:hidden">
-	<div class="flex items-center justify-around">
-		{#each links as link}
-			{@const active = page.url.pathname === link.href || page.url.pathname.startsWith(link.href + '/')}
-			<a
-				href={link.href}
-				class="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs transition-colors
-					{active ? 'text-primary font-semibold nav-active' : 'text-text-muted'}"
-			>
-				<link.icon size={22} />
-				<span>{link.label}</span>
-			</a>
-		{/each}
-	</div>
+<nav class="botnav">
+	{#each links as link}
+		<a class="bot-link {isActive(link.href, page.url.pathname) ? 'on' : ''}" href={link.href}>
+			<span class="bot-he">{link.he}</span>
+			<span class="bot-lat kicker">{link.lat}</span>
+		</a>
+	{/each}
 </nav>

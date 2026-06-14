@@ -1,34 +1,37 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { BookOpen, ShoppingCart, Refrigerator, Egg, UtensilsCrossed, LayoutGrid } from 'lucide-svelte';
 
 	const links = [
-		{ href: '/recipes', label: 'מתכונים', icon: BookOpen },
-		{ href: '/shopping', label: 'רשימת קניות', icon: ShoppingCart },
-		{ href: '/pantry', label: 'מלאי בבית', icon: Refrigerator },
-		{ href: '/ingredients', label: 'מצרכים', icon: Egg },
-		{ href: '/aisles', label: 'מדורים', icon: LayoutGrid }
+		{ href: '/', he: 'השער', lat: 'Cover' },
+		{ href: '/recipes', he: 'מתכונים', lat: 'Recipes' },
+		{ href: '/shopping', he: 'קניות', lat: 'Market' },
+		{ href: '/pantry', he: 'מזווה', lat: 'Pantry' },
+		{ href: '/ingredients', he: 'מצרכים', lat: 'Ingredients' },
+		{ href: '/aisles', he: 'מדורים', lat: 'Aisles' }
 	];
+
+	function isActive(href: string, pathname: string): boolean {
+		if (href === '/') return pathname === '/';
+		return pathname === href || pathname.startsWith(href + '/');
+	}
 </script>
 
-<aside class="hidden md:flex md:w-56 md:flex-col md:border-l md:border-border md:bg-surface-warm/50 md:backdrop-blur-xl">
-	<a href="/" class="flex items-center gap-2 border-b border-border px-4 py-4">
-		<UtensilsCrossed size={24} class="text-primary" />
-		<span class="font-heading text-lg font-bold text-primary brand-glow">Soul Food</span>
+<aside class="side">
+	<a class="brand" href="/">
+		<span class="brand-orn">❧</span>
+		<span class="brand-name">Soul Food</span>
+		<span class="brand-sub kicker">Le Petit Carnet · est. 1952</span>
 	</a>
-	<nav class="flex flex-1 flex-col gap-1 p-2">
+	<nav class="side-nav">
 		{#each links as link}
-			{@const active = page.url.pathname === link.href || page.url.pathname.startsWith(link.href + '/')}
-			<a
-				href={link.href}
-				class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors
-					{active
-						? 'border-e-2 border-primary bg-primary/10 text-primary font-semibold'
-						: 'text-text-muted hover:bg-surface-warm hover:text-text'}"
-			>
-				<link.icon size={18} />
-				<span>{link.label}</span>
+			<a class="side-link {isActive(link.href, page.url.pathname) ? 'on' : ''}" href={link.href}>
+				<span class="side-he">{link.he}</span>
+				<span class="side-lat">{link.lat}</span>
 			</a>
 		{/each}
 	</nav>
+	<div class="side-foot">
+		<div class="fleuron"><span>❦</span></div>
+		<p class="hand side-note">מטבח אחד,<br />אלף סיפורים.</p>
+	</div>
 </aside>

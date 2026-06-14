@@ -1,26 +1,22 @@
 <script lang="ts">
-	import { Plus, Clock, Heart, UtensilsCrossed, Search, X } from 'lucide-svelte';
 	import { formatTime } from '$lib/utils/helpers';
+	import Plate from '$lib/components/Plate.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
 	const categoryLabels: Record<string, string> = {
-		main: 'מנה עיקרית',
-		side: 'תוספת',
-		soup: 'מרק',
-		salad: 'סלט',
-		dessert: 'קינוח',
-		breakfast: 'בוקר',
-		snack: 'חטיף'
+		main: 'מנה עיקרית', side: 'תוספת', soup: 'מרק', salad: 'סלט',
+		dessert: 'קינוח', breakfast: 'ארוחת בוקר', snack: 'חטיף'
 	};
 
 	let searchQuery = $state('');
 	let favoritesOnly = $state(false);
 	let activeCategory = $state<string | null>(null);
 
-	// categories actually present, for the filter chips
-	let categories = $derived([...new Set(data.recipes.map((r) => r.category).filter(Boolean))] as string[]);
+	let categories = $derived(
+		[...new Set(data.recipes.map((r) => r.category).filter(Boolean))] as string[]
+	);
 
 	let filteredRecipes = $derived(
 		data.recipes.filter((r) => {
@@ -34,65 +30,50 @@
 			return true;
 		})
 	);
+
+	function metaParts(r: (typeof data.recipes)[number]): string[] {
+		return [
+			r.totalTimeMinutes ? `◷ ${formatTime(r.totalTimeMinutes)}` : null,
+			r.servings ? `${r.servings} מנות` : null,
+			r.cuisine || null
+		].filter(Boolean) as string[];
+	}
 </script>
 
-<div class="mx-auto max-w-4xl">
-	<div class="mb-4 flex items-center justify-between">
-		<h2 class="text-xl font-bold">המתכונים שלי</h2>
-		<div class="flex gap-2">
-			<a
-				href="/recipes/import"
-				class="btn-primary flex items-center gap-1.5"
-			>
-				<Plus size={16} />
-				ייבא מתכון
-			</a>
+<div class="page library fade">
+	<div class="lib-head">
+		<div>
+			<p class="kicker">L’Index · {data.recipes.length} recettes</p>
+			<h2 class="lib-title">המתכונים שלי</h2>
 		</div>
+		<a href="/recipes/import" class="btn rubric">＋ ייבא מתכון</a>
 	</div>
 
+	<svg class="wavy" viewBox="0 0 300 8" preserveAspectRatio="none">
+		<path
+			d="M0 4 Q 15 0 30 4 T 60 4 T 90 4 T 120 4 T 150 4 T 180 4 T 210 4 T 240 4 T 270 4 T 300 4"
+			stroke="currentColor"
+			fill="none"
+			stroke-width="1.2"
+		/>
+	</svg>
+
 	{#if data.recipes.length === 0}
-		<div class="mt-12 text-center">
-			<div class="logo-ring mx-auto inline-flex">
-				<UtensilsCrossed size={48} class="text-text-muted" />
-			</div>
-			<p class="mt-6 text-text-muted">עדיין אין מתכונים</p>
-			<a
-				href="/recipes/import"
-				class="btn-primary mt-3 inline-flex items-center gap-1.5"
-			>
-				<Plus size={16} />
-				הוסף מתכון ראשון
-			</a>
-		</div>
+		<p class="empty hand">המחברת עדיין ריקה — הוסיפו מתכון ראשון…</p>
 	{:else}
-		<!-- Search + filters -->
-		<div class="mb-3 space-y-2">
-			<div class="relative">
-				<Search size={16} class="absolute start-3 top-1/2 -translate-y-1/2 text-text-muted" />
-				<input
-					type="text"
-					bind:value={searchQuery}
-					placeholder="חיפוש מתכון..."
-					class="input-glass w-full pe-3 ps-9"
-				/>
-				{#if searchQuery}
-					<button onclick={() => (searchQuery = '')} class="absolute end-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text">
-						<X size={16} />
-					</button>
-				{/if}
+		<div class="lib-tools">
+			<div class="lib-search">
+				<span class="search-orn">⌕</span>
+				<input class="field" bind:value={searchQuery} placeholder="חיפוש במחברת…" />
 			</div>
-			<div class="flex flex-wrap gap-1.5">
-				<button
-					onclick={() => (favoritesOnly = !favoritesOnly)}
-					class="flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors {favoritesOnly ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border text-text-muted hover:text-text'}"
-				>
-					<Heart size={12} class={favoritesOnly ? 'fill-primary' : ''} />
-					מועדפים
+			<div class="lib-chips">
+				<button class="chip {favoritesOnly ? 'active' : ''}" onclick={() => (favoritesOnly = !favoritesOnly)}>
+					♥ מועדפים
 				</button>
 				{#each categories as cat}
 					<button
+						class="chip {activeCategory === cat ? 'active' : ''}"
 						onclick={() => (activeCategory = activeCategory === cat ? null : cat)}
-						class="rounded-full border px-2.5 py-1 text-xs transition-colors {activeCategory === cat ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border text-text-muted hover:text-text'}"
 					>
 						{categoryLabels[cat] || cat}
 					</button>
@@ -100,48 +81,43 @@
 			</div>
 		</div>
 
-		{#if filteredRecipes.length === 0}
-			<p class="mt-8 text-center text-text-muted">לא נמצאו מתכונים תואמים</p>
-		{/if}
-
-		<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-			{#each filteredRecipes as recipe}
-				<a
-					href="/recipes/{recipe.id}"
-					class="glass-card glass-card-hover group overflow-hidden"
-				>
-					{#if recipe.imageUrl}
-						<img
-							src={recipe.imageUrl}
-							alt={recipe.titleHe || recipe.title}
-							class="h-40 w-full object-cover"
-						/>
-					{:else}
-						<div class="flex h-40 items-center justify-center bg-surface-warm/30">
-							<UtensilsCrossed size={32} class="text-text-muted/40" />
-						</div>
-					{/if}
-					<div class="p-3">
-						<h3 class="font-semibold transition-colors group-hover:text-primary">
-							{recipe.titleHe || recipe.title}
-						</h3>
-						<div class="mt-1.5 flex items-center gap-3 text-xs text-text-muted">
+		<div class="lib-grid">
+			{#each filteredRecipes as recipe, i (recipe.id)}
+				<a class="rec-card sheet" href="/recipes/{recipe.id}">
+					<span class="tape {i % 2 ? 'tr' : 'tl'}"></span>
+					<Plate
+						caption={recipe.titleHe || recipe.title}
+						imageUrl={recipe.imageUrl}
+						alt={recipe.titleHe || recipe.title}
+						class="rec-plate"
+					/>
+					<div class="rec-body">
+						<div class="rec-row">
 							{#if recipe.category}
-								<span>{categoryLabels[recipe.category] || recipe.category}</span>
+								<span class="kicker">{categoryLabels[recipe.category] || recipe.category}</span>
+							{:else}
+								<span></span>
 							{/if}
-							{#if recipe.totalTimeMinutes}
-								<span class="flex items-center gap-0.5">
-									<Clock size={12} />
-									{formatTime(recipe.totalTimeMinutes)}
-								</span>
-							{/if}
-							{#if recipe.isFavorite}
-								<Heart size={12} class="fill-primary text-primary" />
-							{/if}
+							{#if recipe.isFavorite}<span class="rec-fav">♥</span>{/if}
 						</div>
+						<h3 class="rec-title">{recipe.titleHe || recipe.title}</h3>
+						{#if recipe.titleHe && recipe.title}
+							<p class="rec-lat title-script">{recipe.title}</p>
+						{/if}
+						{#if metaParts(recipe).length}
+							<div class="rec-meta">
+								{#each metaParts(recipe) as p, idx}
+									{#if idx > 0}<span class="dot">·</span>{/if}
+									<span>{p}</span>
+								{/each}
+							</div>
+						{/if}
 					</div>
 				</a>
 			{/each}
+			{#if filteredRecipes.length === 0}
+				<p class="empty hand">לא נמצא מתכון תואם…</p>
+			{/if}
 		</div>
 	{/if}
 </div>
