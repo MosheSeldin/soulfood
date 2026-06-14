@@ -80,7 +80,7 @@ export const actions: Actions = {
 		const nameHe = (data.get('nameHe') as string)?.trim() || null;
 		const aisleCategoryId = (data.get('aisleCategoryId') as string)?.trim() || null;
 
-		if (!ingredientId || !name) return fail(400);
+		if (!ingredientId || (!name && !nameHe)) return fail(400);
 
 		await db
 			.update(ingredients)
