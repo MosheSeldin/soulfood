@@ -23,7 +23,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 			unit: pantryItems.unit,
 			updatedAt: pantryItems.updatedAt,
 			ingredientName: ingredients.name,
-			ingredientNameHe: ingredients.nameHe
+			ingredientNameHe: ingredients.nameHe,
+				isMaayan: ingredients.isMaayan,
+				maayanTop: ingredients.maayanTop
 		})
 		.from(pantryItems)
 		.leftJoin(ingredients, eq(pantryItems.ingredientId, ingredients.id));

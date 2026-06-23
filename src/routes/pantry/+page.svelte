@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Plus, Trash2, X, Refrigerator } from 'lucide-svelte';
+	import MaayanMark from '$lib/components/MaayanMark.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -81,7 +82,7 @@
 		<div class="space-y-1">
 			{#each data.items as item}
 				<div class="glass-card flex items-center justify-between px-4 py-3">
-					<span class="text-sm">{item.ingredientNameHe || item.ingredientName || ''}</span>
+					<span class="flex items-center gap-1.5 text-sm">{#if item.isMaayan}<MaayanMark top={item.maayanTop} />{/if}<span class:maayan-name={item.maayanTop}>{item.ingredientNameHe || item.ingredientName || ''}</span></span>
 					<div class="flex items-center gap-3">
 						{#if item.quantity}
 							<span class="text-xs text-text-muted">

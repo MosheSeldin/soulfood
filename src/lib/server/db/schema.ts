@@ -33,7 +33,11 @@ export const ingredients = sqliteTable(
 		nameHe: text('name_he'),
 		nameKey: text('name_key'),
 		aisleCategoryId: text('aisle_category_id').references(() => aisleCategories.id),
-		defaultUnit: text('default_unit')
+		defaultUnit: text('default_unit'),
+		// Maayan's personal food list: `isMaayan` marks a food she eats (purple dot);
+		// `maayanTop` marks the extra-recommended subset (bold items in her sheet).
+		isMaayan: integer('is_maayan', { mode: 'boolean' }).notNull().default(false),
+		maayanTop: integer('maayan_top', { mode: 'boolean' }).notNull().default(false)
 	},
 	(t) => [uniqueIndex('ingredients_name_key_unique').on(t.nameKey)]
 );

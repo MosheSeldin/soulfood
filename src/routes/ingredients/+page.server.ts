@@ -37,6 +37,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			nameHe: ingredients.nameHe,
 			aisleCategoryId: ingredients.aisleCategoryId,
 			defaultUnit: ingredients.defaultUnit,
+			isMaayan: ingredients.isMaayan,
+			maayanTop: ingredients.maayanTop,
 			aisleName: aisleCategories.name,
 			aisleNameHe: aisleCategories.nameHe,
 			usageCount: sql<number>`(SELECT COUNT(*) FROM recipe_ingredients WHERE ingredient_id = ingredients.id)`
@@ -79,12 +81,22 @@ export const actions: Actions = {
 		const name = (data.get('name') as string)?.trim();
 		const nameHe = (data.get('nameHe') as string)?.trim() || null;
 		const aisleCategoryId = (data.get('aisleCategoryId') as string)?.trim() || null;
+		const isMaayan = data.get('isMaayan') === 'on' || data.get('isMaayan') === 'true';
+		// "extra-recommended" implies it's one of Maayan's foods
+		const maayanTop = data.get('maayanTop') === 'on' || data.get('maayanTop') === 'true';
 
 		if (!ingredientId || (!name && !nameHe)) return fail(400);
 
 		await db
 			.update(ingredients)
-			.set({ name, nameHe, nameKey: computeNameKey(name, nameHe), aisleCategoryId })
+			.set({
+				name,
+				nameHe,
+				nameKey: computeNameKey(name, nameHe),
+				aisleCategoryId,
+				isMaayan: isMaayan || maayanTop,
+				maayanTop
+			})
 			.where(eq(ingredients.id, ingredientId));
 	},
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Plate from '$lib/components/Plate.svelte';
+	import MaayanMark from '$lib/components/MaayanMark.svelte';
 	import { formatTime } from '$lib/utils/helpers';
 	import type { PageData } from './$types';
 
@@ -127,7 +128,7 @@
 						<span class="ing-q">
 							{#if ing.quantity}{frac(ing.quantity)} {ing.unit ? unitLabels[ing.unit] || ing.unit : ''}{/if}
 						</span>
-						<span class="ing-n">
+						<span class="ing-n">{#if ing.isMaayan}<MaayanMark top={ing.maayanTop} />{/if}
 							{#if ing.variants && ing.variants.length > 1}
 								<select
 									class="ing-variant"
@@ -139,7 +140,7 @@
 									{/each}
 								</select>
 							{:else}
-								{getDisplayName(ing)}
+								<span class:maayan-name={ing.maayanTop}>{getDisplayName(ing)}</span>
 							{/if}
 							{#if ing.preparation}<i class="ing-prep">, {ing.preparation}</i>{/if}
 							{#if ing.isOptional}<i class="ing-prep"> (לפי הטעם)</i>{/if}

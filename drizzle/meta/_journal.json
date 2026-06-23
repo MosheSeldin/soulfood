@@ -15,6 +15,13 @@
       "when": 1774463535074,
       "tag": "0001_powerful_arachne",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782202363646,
+      "tag": "0002_maayan_food_flags",
+      "breakpoints": true
     }
   ]
 }

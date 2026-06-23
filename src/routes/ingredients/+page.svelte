@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Plus, Pencil, Check, X, Search, Trash2, Merge, ScanSearch, ChevronDown } from 'lucide-svelte';
+	import MaayanMark from '$lib/components/MaayanMark.svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -10,6 +11,9 @@
 	let editName = $state('');
 	let editNameHe = $state('');
 	let editAisleCategoryId = $state('');
+	let editIsMaayan = $state(false);
+	let editMaayanTop = $state(false);
+	let showMaayanOnly = $state(false);
 	let addedItems = $state<Record<string, boolean>>({});
 	let selectedVariants = $state<Record<string, string>>({});
 	let mergingId = $state<string | null>(null);
@@ -40,6 +44,7 @@
 
 	let filteredIngredients = $derived(
 		data.ingredients.filter((ing) => {
+			if (showMaayanOnly && !ing.isMaayan) return false;
 			if (!searchQuery) return true;
 			const q = searchQuery.toLowerCase();
 			return (
@@ -75,6 +80,8 @@
 		editName = ing.name ?? '';
 		editNameHe = ing.nameHe || '';
 		editAisleCategoryId = ing.aisleCategoryId || '';
+		editIsMaayan = ing.isMaayan;
+		editMaayanTop = ing.maayanTop;
 		mergingId = null;
 	}
 
@@ -198,6 +205,23 @@
 		{/if}
 	</div>
 
+	<!-- Maayan legend + filter -->
+	<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+		<button
+			type="button"
+			onclick={() => { showMaayanOnly = !showMaayanOnly; }}
+			class="flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors {showMaayanOnly ? 'border-[var(--maayan)] bg-[var(--maayan-wash)] text-[var(--maayan-deep)]' : 'border-border text-text-muted hover:text-text'}"
+		>
+			<MaayanMark />
+			המזונות של מעיין
+		</button>
+		<span class="flex items-center gap-1 text-[11px] text-text-muted">
+			<MaayanMark /> מהמזונות שלה
+			<span class="mx-1 opacity-40">·</span>
+			<MaayanMark top /> מומלץ במיוחד
+		</span>
+	</div>
+
 	<!-- Ingredient list grouped by aisle -->
 	{#if filteredIngredients.length === 0}
 		<p class="mt-8 text-center text-text-muted">
@@ -242,6 +266,16 @@
 									placeholder="English name"
 									class="input-glass flex-1 px-2 py-1"
 								/>
+							</div>
+							<div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-0.5">
+								<label class="flex cursor-pointer items-center gap-1.5 text-xs text-text-muted">
+									<input type="checkbox" name="isMaayan" bind:checked={editIsMaayan} class="accent-[var(--maayan)]" />
+									מהמזונות של מעיין
+								</label>
+								<label class="flex cursor-pointer items-center gap-1.5 text-xs text-text-muted">
+									<input type="checkbox" name="maayanTop" bind:checked={editMaayanTop} class="accent-[var(--maayan)]" />
+									מומלץ במיוחד
+								</label>
 							</div>
 							<div class="flex items-center gap-2">
 								<select
@@ -351,7 +385,7 @@
 						<div class="flex items-center gap-2">
 							<div class="flex-1 min-w-0">
 								<div class="flex items-center gap-1.5 flex-wrap">
-									<span class="text-sm font-medium">{ing.nameHe || ing.name}</span>
+									{#if ing.isMaayan}<MaayanMark top={ing.maayanTop} />{/if}<span class="text-sm font-medium" class:maayan-name={ing.maayanTop}>{ing.nameHe || ing.name}</span>
 									{#if ing.nameHe && ing.name}
 										<span class="text-xs text-text-muted">{ing.name}</span>
 									{/if}

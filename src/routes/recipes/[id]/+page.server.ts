@@ -27,7 +27,9 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			sortOrder: recipeIngredients.sortOrder,
 			ingredientName: ingredients.name,
 			ingredientNameHe: ingredients.nameHe,
-			aisleCategoryId: ingredients.aisleCategoryId
+			aisleCategoryId: ingredients.aisleCategoryId,
+				isMaayan: ingredients.isMaayan,
+				maayanTop: ingredients.maayanTop
 		})
 		.from(recipeIngredients)
 		.leftJoin(ingredients, eq(recipeIngredients.ingredientId, ingredients.id))

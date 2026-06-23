@@ -67,6 +67,21 @@
 	--hand: 'Gveret Levin AlefAlefAlef', cursive;
 
 	--tape: rgba(213, 196, 150, 0.55);
+
+	/* Maayan's foods — a plum-violet tuned to sit on warm parchment.
+	   `--maayan` is the dot; `--maayan-deep` tints the names of the
+	   extra-recommended items; the gem marker uses bright + ring. */
+	--maayan: #8a4fa0;
+	--maayan-deep: #6e3d83;
+	--maayan-bright: #b274c8;
+	--maayan-ring: rgba(138, 79, 160, 0.22);
+	--maayan-wash: rgba(138, 79, 160, 0.08);
+}
+
+/* name of an extra-recommended food — used across all screens */
+.maayan-name {
+	color: var(--maayan-deep);
+	font-weight: 600;
 }
 
 /* ── alternate palettes — set data-theme on <html> ─────── */

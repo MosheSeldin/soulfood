@@ -48,6 +48,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			chosenVariantId: shoppingListItems.chosenVariantId,
 			ingredientName: ingredients.name,
 			ingredientNameHe: ingredients.nameHe,
+				isMaayan: ingredients.isMaayan,
+				maayanTop: ingredients.maayanTop,
 			aisleName: aisleCategories.nameHe,
 			aisleSortOrder: aisleCategories.sortOrder,
 			aisleIcon: aisleCategories.icon,
@@ -143,7 +145,7 @@ export const actions: Actions = {
 		if (!q || q.length < 2) return { results: [] };
 		const pattern = `%${q}%`;
 		const results = await db
-			.select({ id: ingredients.id, name: ingredients.name, nameHe: ingredients.nameHe, aisleCategoryId: ingredients.aisleCategoryId, defaultUnit: ingredients.defaultUnit })
+			.select({ id: ingredients.id, name: ingredients.name, nameHe: ingredients.nameHe, aisleCategoryId: ingredients.aisleCategoryId, defaultUnit: ingredients.defaultUnit, isMaayan: ingredients.isMaayan, maayanTop: ingredients.maayanTop })
 			.from(ingredients)
 			.where(or(like(ingredients.name, pattern), like(ingredients.nameHe, pattern)))
 			.limit(8);

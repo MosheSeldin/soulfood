@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import MaayanMark from '$lib/components/MaayanMark.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -9,7 +10,7 @@
 
 	// Autocomplete state
 	let searchResults = $state<
-		Array<{ id: string; name: string; nameHe: string | null; aisleCategoryId: string | null; defaultUnit: string | null }>
+		Array<{ id: string; name: string; nameHe: string | null; aisleCategoryId: string | null; defaultUnit: string | null; isMaayan?: boolean; maayanTop?: boolean }>
 	>([]);
 	let selectedIngredient = $state<(typeof searchResults)[0] | null>(null);
 	let addQuantity = $state('');
@@ -180,7 +181,7 @@
 												</svg>
 											</span>
 											<span class="shop-main">
-												<span class="shop-n">{itemName(item)}</span>
+												<span class="shop-n" class:maayan-name={item.maayanTop}>{#if item.isMaayan}<MaayanMark top={item.maayanTop} />{/if}{itemName(item)}</span>
 												{#if item.sourceRecipeNames.length > 0}
 													<span class="shop-from kicker">מתוך: {item.sourceRecipeNames.join(' · ')}</span>
 												{/if}
@@ -318,7 +319,7 @@
 					{#each searchResults as result}
 						{@const existing = getExistingItemForIngredient(result.id)}
 						<button type="button" class="dropdown-row" onmousedown={() => selectIngredient(result)}>
-							<span>{result.nameHe || result.name}</span>
+							<span>{#if result.isMaayan}<MaayanMark top={result.maayanTop} />{/if}{result.nameHe || result.name}</span>
 							{#if existing}
 								<span class="kicker">ברשימה: {formatQty(existing.quantity)}
 									{existing.unit ? unitLabels[existing.unit] || existing.unit : ''}</span>
