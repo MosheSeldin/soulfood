@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { Plus, Pencil, Check, X, Search, Trash2, Merge, ScanSearch, ChevronDown } from 'lucide-svelte';
 	import MaayanMark from '$lib/components/MaayanMark.svelte';
+	import SectionTabs from '$lib/components/SectionTabs.svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -102,8 +103,10 @@
 </script>
 
 <div class="mx-auto max-w-lg">
+	<div class="mb-4 flex justify-center">
+		<SectionTabs />
+	</div>
 	<div class="mb-4 flex items-center justify-between">
-		<h2 class="text-xl font-bold">בנק מצרכים</h2>
 		<div class="flex items-center gap-2">
 			<a href="/aisles" class="btn-ghost px-3 py-1.5 text-xs">ניהול מדורים</a>
 			<form method="POST" action="?/detectDuplicates" use:enhance={() => {
@@ -119,10 +122,10 @@
 					{/if}
 				</button>
 			</form>
-			<span class="glass-card px-3 py-1 text-sm font-medium text-primary">
-				{data.ingredients.length}
-			</span>
 		</div>
+		<span class="glass-card px-3 py-1 text-sm font-medium text-primary">
+			{data.ingredients.length}
+		</span>
 	</div>
 
 	<!-- Duplicate Groups Panel -->

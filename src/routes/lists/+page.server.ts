@@ -11,7 +11,7 @@ import {
 import { eq, and, or, like, inArray, asc } from 'drizzle-orm';
 import { generateId } from '$lib/utils/helpers';
 import { keyForString } from '$lib/server/ingredients/classifier';
-import { addTemplateToActiveList, touchList } from '$lib/server/shopping';
+import { addTemplateToActiveList, addTemplateItemsToActiveList, touchList } from '$lib/server/shopping';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
@@ -237,5 +237,30 @@ export const actions: Actions = {
 		if (!listId) return fail(400);
 		const added = await addTemplateToActiveList(listId);
 		redirect(303, `/shopping?added=${added}`);
+	},
+
+	// Add a single saved-list item to the active shopping list (stay on this page).
+	addItemToShopping: async ({ request }) => {
+		const data = await request.formData();
+		const itemId = data.get('itemId') as string;
+		if (!itemId) return fail(400);
+		const added = await addTemplateItemsToActiveList([itemId]);
+		return { addedItemId: itemId, added };
+	},
+
+	// Add a ticked subset of a list's items to the active shopping list.
+	addSelectedToShopping: async ({ request }) => {
+		const data = await request.formData();
+		const raw = (data.get('itemIds') as string) || '[]';
+		let ids: string[] = [];
+		try {
+			const parsed = JSON.parse(raw);
+			if (Array.isArray(parsed)) ids = parsed.filter((x): x is string => typeof x === 'string');
+		} catch {
+			ids = [];
+		}
+		if (ids.length === 0) return fail(400, { error: 'לא נבחרו פריטים' });
+		const added = await addTemplateItemsToActiveList(ids);
+		return { addedSelected: added, addedCount: ids.length };
 	}
 };

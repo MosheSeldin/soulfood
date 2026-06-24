@@ -4,13 +4,14 @@
 	const links = [
 		{ href: '/recipes', he: 'מתכונים', lat: 'Recipes' },
 		{ href: '/shopping', he: 'קניות', lat: 'Market' },
-		{ href: '/lists', he: 'רשימות', lat: 'Lists' },
 		{ href: '/pantry', he: 'מזווה', lat: 'Pantry' },
 		{ href: '/ingredients', he: 'מצרכים', lat: 'Ingredients' }
 	];
 
 	function isActive(href: string, pathname: string): boolean {
-		return pathname === href || pathname.startsWith(href + '/');
+		if (pathname === href || pathname.startsWith(href + '/')) return true;
+		// Lists now live under the Ingredients section.
+		return href === '/ingredients' && pathname.startsWith('/lists');
 	}
 </script>
 

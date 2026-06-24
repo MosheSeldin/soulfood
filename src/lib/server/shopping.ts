@@ -109,6 +109,64 @@ export async function addIngredientToShoppingList(opts: {
 	});
 }
 
+type ListItemRow = typeof shoppingListItems.$inferSelect;
+
+/**
+ * Copy one saved-list row into the active list, deduping by ingredient+variant
+ * (or by custom name for free-text rows). Returns true if a new row was added.
+ */
+async function copyItemToActiveList(
+	tx: Executor,
+	activeId: string,
+	it: ListItemRow
+): Promise<boolean> {
+	if (it.ingredientId) {
+		const variantCondition = it.chosenVariantId
+			? eq(shoppingListItems.chosenVariantId, it.chosenVariantId)
+			: isNull(shoppingListItems.chosenVariantId);
+		const existing = await tx
+			.select({ id: shoppingListItems.id })
+			.from(shoppingListItems)
+			.where(
+				and(
+					eq(shoppingListItems.shoppingListId, activeId),
+					eq(shoppingListItems.ingredientId, it.ingredientId),
+					variantCondition
+				)
+			)
+			.limit(1);
+		if (existing.length > 0) return false; // already on the list — leave it be
+	} else if (it.customName) {
+		const existing = await tx
+			.select({ id: shoppingListItems.id })
+			.from(shoppingListItems)
+			.where(
+				and(
+					eq(shoppingListItems.shoppingListId, activeId),
+					eq(shoppingListItems.customName, it.customName)
+				)
+			)
+			.limit(1);
+		if (existing.length > 0) return false;
+	} else {
+		return false; // nothing identifiable to copy
+	}
+
+	await tx.insert(shoppingListItems).values({
+		id: generateId(),
+		shoppingListId: activeId,
+		ingredientId: it.ingredientId,
+		customName: it.customName,
+		quantity: it.quantity,
+		unit: it.unit,
+		isChecked: false,
+		aisleCategoryId: it.aisleCategoryId || 'other',
+		addedManually: true,
+		chosenVariantId: it.chosenVariantId
+	});
+	return true;
+}
+
 /**
  * Copy every item from a saved/custom list (e.g. "קלאסי") into the active
  * shopping list, merging by ingredient+variant so nothing is duplicated.
@@ -124,52 +182,30 @@ export async function addTemplateToActiveList(templateListId: string): Promise<n
 
 		const activeId = await getOrCreateActiveShoppingList(tx);
 		let added = 0;
+		for (const it of items) if (await copyItemToActiveList(tx, activeId, it)) added++;
 
-		for (const it of items) {
-			if (it.ingredientId) {
-				const variantCondition = it.chosenVariantId
-					? eq(shoppingListItems.chosenVariantId, it.chosenVariantId)
-					: isNull(shoppingListItems.chosenVariantId);
-				const existing = await tx
-					.select({ id: shoppingListItems.id })
-					.from(shoppingListItems)
-					.where(
-						and(
-							eq(shoppingListItems.shoppingListId, activeId),
-							eq(shoppingListItems.ingredientId, it.ingredientId),
-							variantCondition
-						)
-					)
-					.limit(1);
-				if (existing.length > 0) continue; // already on the list — leave it be
-			} else if (it.customName) {
-				const existing = await tx
-					.select({ id: shoppingListItems.id })
-					.from(shoppingListItems)
-					.where(
-						and(
-							eq(shoppingListItems.shoppingListId, activeId),
-							eq(shoppingListItems.customName, it.customName)
-						)
-					)
-					.limit(1);
-				if (existing.length > 0) continue;
-			}
+		await touchList(activeId, tx);
+		return added;
+	});
+}
 
-			await tx.insert(shoppingListItems).values({
-				id: generateId(),
-				shoppingListId: activeId,
-				ingredientId: it.ingredientId,
-				customName: it.customName,
-				quantity: it.quantity,
-				unit: it.unit,
-				isChecked: false,
-				aisleCategoryId: it.aisleCategoryId || 'other',
-				addedManually: true,
-				chosenVariantId: it.chosenVariantId
-			});
-			added++;
-		}
+/**
+ * Copy a chosen subset of saved-list rows (by their ids) into the active list.
+ * Powers "add this one item" and "add the items I ticked" from the lists page.
+ * Returns how many new rows were added.
+ */
+export async function addTemplateItemsToActiveList(itemIds: string[]): Promise<number> {
+	if (itemIds.length === 0) return 0;
+	return await db.transaction(async (tx) => {
+		const items = await tx
+			.select()
+			.from(shoppingListItems)
+			.where(inArray(shoppingListItems.id, itemIds));
+		if (items.length === 0) return 0;
+
+		const activeId = await getOrCreateActiveShoppingList(tx);
+		let added = 0;
+		for (const it of items) if (await copyItemToActiveList(tx, activeId, it)) added++;
 
 		await touchList(activeId, tx);
 		return added;
