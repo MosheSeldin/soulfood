@@ -1,14 +1,7 @@
-import { redirect, type Handle } from '@sveltejs/kit';
-import { getSession } from '$lib/server/auth';
+import type { Handle } from '@sveltejs/kit';
 
+// Auth removed — the app is open to everyone. No session lookup, no redirects.
 export const handle: Handle = async ({ event, resolve }) => {
-	const session = await getSession(event.cookies);
-	event.locals.user = session;
-
-	// Protect all routes except login and API
-	if (!session && !event.url.pathname.startsWith('/login') && !event.url.pathname.startsWith('/api')) {
-		redirect(302, '/login');
-	}
-
+	event.locals.user = null;
 	return resolve(event);
 };

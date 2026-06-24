@@ -12,7 +12,6 @@ import {
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
-	if (!locals.user) redirect(302, '/login');
 
 	const recipe = await db.select().from(recipes).where(eq(recipes.id, params.id)).limit(1);
 	if (recipe.length === 0) error(404, 'מתכון לא נמצא');
@@ -67,7 +66,6 @@ interface StructuredIngredient {
 
 export const actions: Actions = {
 	default: async ({ request, params, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 
 		const data = await request.formData();
 		const title = (data.get('title') as string)?.trim();

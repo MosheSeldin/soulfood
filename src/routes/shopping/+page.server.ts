@@ -1,4 +1,4 @@
-import { redirect, fail } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import {
 	shoppingLists, shoppingListItems, shoppingListRecipes,
@@ -8,13 +8,13 @@ import {
 import { eq, and, inArray, or, like } from 'drizzle-orm';
 import { generateId } from '$lib/utils/helpers';
 import { keyForString } from '$lib/server/ingredients/classifier';
-import { reconcileList, touchList, getOrCreateActiveShoppingList } from '$lib/server/shopping';
+import { reconcileList, touchList, getOrCreateActiveShoppingList, addTemplateToActiveList } from '$lib/server/shopping';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals, url }) => {
-	if (!locals.user) redirect(302, '/login');
+export const load: PageServerLoad = async ({ url }) => {
 
 	const addRecipeId = url.searchParams.get('add');
+	const addedCount = url.searchParams.get('added');
 
 	let activeList = await db.select().from(shoppingLists).where(eq(shoppingLists.isActive, true)).limit(1);
 	if (activeList.length === 0) {
@@ -111,14 +111,22 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.sort(([, a], [, b]) => a.sortOrder - b.sortOrder)
 		.map(([id, data]) => ({ id, ...data }));
 
+	// Saved/custom lists (e.g. "קלאסי") offered as one-tap quick-adds.
+	const templates = await db
+		.select({ id: shoppingLists.id, name: shoppingLists.name })
+		.from(shoppingLists)
+		.where(eq(shoppingLists.isTemplate, true));
+
 	return {
 		listId,
 		listVersion: activeList[0].version,
 		aisles: sortedAisles,
 		listRecipes,
+		templates,
 		totalItems: items.length,
 		checkedItems: items.filter((i) => i.isChecked).length,
-		addedRecipe: addRecipeId ? true : false
+		addedRecipe: addRecipeId ? true : false,
+		addedFromList: addedCount !== null ? parseInt(addedCount) || 0 : null
 	};
 };
 
@@ -128,8 +136,15 @@ async function activeListId(): Promise<string | null> {
 }
 
 export const actions: Actions = {
+	addTemplate: async ({ request }) => {
+		const data = await request.formData();
+		const listId = data.get('listId') as string;
+		if (!listId) return fail(400);
+		const added = await addTemplateToActiveList(listId);
+		return { addedFromList: added };
+	},
+
 	toggleItem: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const itemId = data.get('itemId') as string;
 		const currentState = data.get('isChecked') === 'true';
@@ -139,7 +154,6 @@ export const actions: Actions = {
 	},
 
 	searchIngredients: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const q = (data.get('q') as string)?.trim();
 		if (!q || q.length < 2) return { results: [] };
@@ -153,7 +167,6 @@ export const actions: Actions = {
 	},
 
 	addCustomItem: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const name = (data.get('name') as string)?.trim();
 		let ingredientId = (data.get('ingredientId') as string)?.trim() || null;
@@ -202,7 +215,6 @@ export const actions: Actions = {
 	},
 
 	removeRecipe: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const recipeId = data.get('recipeId') as string;
 		const listId = await activeListId();
@@ -214,7 +226,6 @@ export const actions: Actions = {
 	},
 
 	clearChecked: async ({ locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const listId = await activeListId();
 		if (!listId) return;
 		await db.delete(shoppingListItems).where(and(eq(shoppingListItems.shoppingListId, listId), eq(shoppingListItems.isChecked, true)));
@@ -222,7 +233,6 @@ export const actions: Actions = {
 	},
 
 	chooseVariant: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const itemId = data.get('itemId') as string;
 		const variantId = data.get('variantId') as string;
@@ -233,7 +243,6 @@ export const actions: Actions = {
 	},
 
 	updateQuantity: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const itemId = data.get('itemId') as string;
 		const quantityStr = data.get('quantity') as string;
@@ -246,7 +255,6 @@ export const actions: Actions = {
 	},
 
 	deleteItem: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const itemId = data.get('itemId') as string;
 		if (!itemId) return fail(400);
@@ -256,7 +264,6 @@ export const actions: Actions = {
 	},
 
 	clearAll: async ({ locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const listId = await activeListId();
 		if (!listId) return;
 		await db.delete(shoppingListItems).where(eq(shoppingListItems.shoppingListId, listId));

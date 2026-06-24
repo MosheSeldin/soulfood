@@ -1,4 +1,4 @@
-import { redirect, fail } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import {
 	ingredients,
@@ -28,7 +28,6 @@ async function reconcileActive() {
 }
 
 export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.user) redirect(302, '/login');
 
 	const allIngredients = await db
 		.select({
@@ -75,7 +74,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
 	updateIngredient: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const ingredientId = data.get('ingredientId') as string;
 		const name = (data.get('name') as string)?.trim();
@@ -101,7 +99,6 @@ export const actions: Actions = {
 	},
 
 	deleteIngredient: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const ingredientId = data.get('ingredientId') as string;
 		if (!ingredientId) return fail(400);
@@ -124,7 +121,6 @@ export const actions: Actions = {
 	},
 
 	mergeIngredient: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const fromId = data.get('fromId') as string;
 		const toId = data.get('toId') as string;
@@ -136,7 +132,6 @@ export const actions: Actions = {
 	},
 
 	addVariant: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const ingredientId = data.get('ingredientId') as string;
 		const variantNameHe = (data.get('variantNameHe') as string)?.trim();
@@ -148,7 +143,6 @@ export const actions: Actions = {
 	},
 
 	deleteVariant: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const variantId = data.get('variantId') as string;
 		if (!variantId) return fail(400);
@@ -156,7 +150,6 @@ export const actions: Actions = {
 	},
 
 	addToShoppingList: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const ingredientId = data.get('ingredientId') as string;
 		if (!ingredientId) return fail(400);
@@ -177,7 +170,6 @@ export const actions: Actions = {
 	},
 
 	detectDuplicates: async ({ locals }) => {
-		if (!locals.user) redirect(302, '/login');
 
 		const allIngs = await db
 			.select({
@@ -227,7 +219,6 @@ export const actions: Actions = {
 	},
 
 	autoMergeDuplicates: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const canonicalId = data.get('canonicalId') as string;
 		const memberIdsJson = data.get('memberIds') as string;

@@ -2,15 +2,14 @@
 	import { page } from '$app/state';
 
 	const links = [
-		{ href: '/', he: 'השער', lat: 'Cover' },
 		{ href: '/recipes', he: 'מתכונים', lat: 'Recipes' },
 		{ href: '/shopping', he: 'קניות', lat: 'Market' },
+		{ href: '/lists', he: 'רשימות', lat: 'Lists' },
 		{ href: '/pantry', he: 'מזווה', lat: 'Pantry' },
 		{ href: '/ingredients', he: 'מצרכים', lat: 'Ingredients' }
 	];
 
 	function isActive(href: string, pathname: string): boolean {
-		if (href === '/') return pathname === '/';
 		return pathname === href || pathname.startsWith(href + '/');
 	}
 </script>

@@ -1,9 +1,14 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { enhance, deserialize } from '$app/forms';
 	import MaayanMark from '$lib/components/MaayanMark.svelte';
-	import type { PageData } from './$types';
+	import type { ActionResult } from '@sveltejs/kit';
+	import type { PageData, ActionData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	let addedNote = $derived(
+		(form && 'addedFromList' in form ? form.addedFromList : null) ?? data.addedFromList
+	);
 
 	let customItemName = $state('');
 	let collapsedAisles = $state(new Set<string>());
@@ -63,9 +68,8 @@
 		const formData = new FormData();
 		formData.set('q', query);
 		const res = await fetch('?/searchIngredients', { method: 'POST', body: formData });
-		const json = await res.json();
-		const actionData = json?.data ? JSON.parse(json.data) : null;
-		searchResults = actionData?.results || [];
+		const result: ActionResult = deserialize(await res.text());
+		searchResults = result.type === 'success' ? ((result.data?.results as typeof searchResults) ?? []) : [];
 		showDropdown = searchResults.length > 0;
 	}
 
@@ -137,6 +141,25 @@
 			stroke-width="1.2"
 		/>
 	</svg>
+
+	{#if addedNote !== null && addedNote !== undefined}
+		<p class="added-note hand">
+			{#if addedNote > 0}נוספו {addedNote} פריטים מהרשימה השמורה ✓{:else}כל הפריטים כבר היו ברשימה{/if}
+		</p>
+	{/if}
+
+	{#if data.templates.length > 0}
+		<div class="saved-lists">
+			<span class="saved-label kicker">רשימות שמורות:</span>
+			{#each data.templates as t}
+				<form method="POST" action="?/addTemplate" use:enhance>
+					<input type="hidden" name="listId" value={t.id} />
+					<button class="saved-chip">＋ {t.name}</button>
+				</form>
+			{/each}
+			<a class="saved-chip is-manage" href="/lists">נהל ←</a>
+		</div>
+	{/if}
 
 	{#if data.listRecipes.length > 0}
 		<div class="list-recipes">
@@ -373,6 +396,48 @@
 	.list-chip .x {
 		font-size: 0.75em;
 		opacity: 0.7;
+	}
+
+	.added-note {
+		color: var(--rubric);
+		text-align: center;
+		margin: 0.2rem 0 1rem;
+	}
+
+	.saved-lists {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
+		margin-bottom: 1.2rem;
+	}
+	.saved-label {
+		color: var(--ink-muted);
+	}
+	.saved-chip {
+		font-family: var(--latin);
+		font-size: 0.85rem;
+		color: var(--rubric);
+		border: 1px solid var(--rubric);
+		background: var(--note-bg);
+		padding: 0.15em 0.7em;
+		border-radius: 999px;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+	.saved-chip:hover {
+		background: var(--rubric);
+		color: var(--paper, #fff);
+	}
+	.saved-chip.is-manage {
+		color: var(--ink-soft);
+		border-color: var(--ink-faint);
+		border-style: dashed;
+	}
+	.saved-chip.is-manage:hover {
+		background: transparent;
+		color: var(--rubric);
+		border-color: var(--rubric);
 	}
 
 	.aisle-h {

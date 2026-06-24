@@ -10,7 +10,6 @@ import { addIngredientToShoppingList, reconcileList } from '$lib/server/shopping
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
-	if (!locals.user) redirect(302, '/login');
 
 	const recipe = await db.select().from(recipes).where(eq(recipes.id, params.id)).limit(1);
 	if (recipe.length === 0) error(404, 'מתכון לא נמצא');
@@ -53,7 +52,6 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 export const actions: Actions = {
 	toggleFavorite: async ({ params, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const recipe = await db.select().from(recipes).where(eq(recipes.id, params.id)).limit(1);
 		if (recipe.length === 0) return fail(404);
 		await db
@@ -63,7 +61,6 @@ export const actions: Actions = {
 	},
 
 	addToShoppingList: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const ingredientId = data.get('ingredientId') as string;
 		if (!ingredientId) return fail(400);
@@ -86,7 +83,6 @@ export const actions: Actions = {
 	},
 
 	delete: async ({ params, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 
 		const affectedLists = await db
 			.select({ id: shoppingListRecipes.shoppingListId })

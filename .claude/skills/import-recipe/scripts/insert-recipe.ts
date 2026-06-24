@@ -53,13 +53,13 @@ async function main() {
 
 	const data: RecipeImport = JSON.parse(readFileSync(jsonPath, 'utf-8'));
 
-	// Get first user as creator
-	const allUsers = await db.select().from(users).limit(1);
-	const userId = allUsers[0]?.id;
-	if (!userId) {
-		console.error('No users found in database');
-		process.exit(1);
+	if (!data.imageUrl) {
+		console.warn('⚠️  No imageUrl set — the recipe will have no photo. See SKILL.md Step 3.');
 	}
+
+	// createdBy is optional (auth was removed). Attribute to the first user if one exists.
+	const allUsers = await db.select().from(users).limit(1);
+	const userId = allUsers[0]?.id ?? null;
 
 	const recipeId = generateId();
 

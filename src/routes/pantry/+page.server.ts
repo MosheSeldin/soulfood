@@ -1,4 +1,4 @@
-import { redirect, fail } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { pantryItems, ingredients, shoppingLists } from '$lib/server/db/schema';
 import { eq, or, like } from 'drizzle-orm';
@@ -13,7 +13,6 @@ async function reconcileActive() {
 }
 
 export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.user) redirect(302, '/login');
 
 	const items = await db
 		.select({
@@ -35,7 +34,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
 	add: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const name = (data.get('name') as string)?.trim();
 		const quantityStr = data.get('quantity') as string;
@@ -57,7 +55,6 @@ export const actions: Actions = {
 	},
 
 	updateQuantity: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const itemId = data.get('itemId') as string;
 		const quantityStr = data.get('quantity') as string;
@@ -69,7 +66,6 @@ export const actions: Actions = {
 	},
 
 	remove: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const itemId = data.get('itemId') as string;
 		await db.delete(pantryItems).where(eq(pantryItems.id, itemId));
@@ -77,7 +73,6 @@ export const actions: Actions = {
 	},
 
 	clearAll: async ({ locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		await db.delete(pantryItems);
 		await reconcileActive();
 	},

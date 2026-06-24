@@ -6,14 +6,12 @@ import { parseIngredient } from '$lib/server/ingredients/parser';
 import { resolveIngredient, createResolveMemo } from '$lib/server/ingredients/normalizer';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.user) redirect(302, '/login');
+export const load: PageServerLoad = async () => {
 	return {};
 };
 
 export const actions: Actions = {
-	save: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
+	save: async ({ request }) => {
 
 		const data = await request.formData();
 		const title = (data.get('title') as string)?.trim();
@@ -59,8 +57,7 @@ export const actions: Actions = {
 				tags,
 				category,
 				cuisine,
-				isFavorite: false,
-				createdBy: locals.user!.userId
+				isFavorite: false
 			});
 
 			const memo = createResolveMemo();

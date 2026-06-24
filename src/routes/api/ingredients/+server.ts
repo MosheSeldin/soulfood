@@ -4,9 +4,7 @@ import { ingredients } from '$lib/server/db/schema';
 import { like, or } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ url, locals }) => {
-	if (!locals.user) return json([]);
-
+export const GET: RequestHandler = async ({ url }) => {
 	const q = url.searchParams.get('q')?.trim();
 	if (!q || q.length < 1) return json([]);
 

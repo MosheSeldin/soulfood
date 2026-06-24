@@ -130,6 +130,9 @@ export const pantryItems = sqliteTable(
 );
 
 // ──── Shopping Lists ────
+// Two kinds share this table:
+//  • the live shopping list (isActive=true, isTemplate=false) — recipe-driven, reconciled
+//  • saved/custom lists (isTemplate=true, isActive=false) — e.g. "קלאסי", curated staples
 export const shoppingLists = sqliteTable('shopping_lists', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
@@ -140,7 +143,8 @@ export const shoppingLists = sqliteTable('shopping_lists', {
 		.notNull()
 		.default(sql`(unixepoch())`),
 	version: integer('version').notNull().default(0),
-	isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true)
+	isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+	isTemplate: integer('is_template', { mode: 'boolean' }).notNull().default(false)
 });
 
 // ──── Shopping List Items ────

@@ -109,6 +109,73 @@ export async function addIngredientToShoppingList(opts: {
 	});
 }
 
+/**
+ * Copy every item from a saved/custom list (e.g. "קלאסי") into the active
+ * shopping list, merging by ingredient+variant so nothing is duplicated.
+ * Returns how many new rows were added. Items already on the list are skipped.
+ */
+export async function addTemplateToActiveList(templateListId: string): Promise<number> {
+	return await db.transaction(async (tx) => {
+		const items = await tx
+			.select()
+			.from(shoppingListItems)
+			.where(eq(shoppingListItems.shoppingListId, templateListId));
+		if (items.length === 0) return 0;
+
+		const activeId = await getOrCreateActiveShoppingList(tx);
+		let added = 0;
+
+		for (const it of items) {
+			if (it.ingredientId) {
+				const variantCondition = it.chosenVariantId
+					? eq(shoppingListItems.chosenVariantId, it.chosenVariantId)
+					: isNull(shoppingListItems.chosenVariantId);
+				const existing = await tx
+					.select({ id: shoppingListItems.id })
+					.from(shoppingListItems)
+					.where(
+						and(
+							eq(shoppingListItems.shoppingListId, activeId),
+							eq(shoppingListItems.ingredientId, it.ingredientId),
+							variantCondition
+						)
+					)
+					.limit(1);
+				if (existing.length > 0) continue; // already on the list — leave it be
+			} else if (it.customName) {
+				const existing = await tx
+					.select({ id: shoppingListItems.id })
+					.from(shoppingListItems)
+					.where(
+						and(
+							eq(shoppingListItems.shoppingListId, activeId),
+							eq(shoppingListItems.customName, it.customName)
+						)
+					)
+					.limit(1);
+				if (existing.length > 0) continue;
+			}
+
+			await tx.insert(shoppingListItems).values({
+				id: generateId(),
+				shoppingListId: activeId,
+				ingredientId: it.ingredientId,
+				customName: it.customName,
+				quantity: it.quantity,
+				unit: it.unit,
+				isChecked: false,
+				aisleCategoryId: it.aisleCategoryId || 'other',
+				addedManually: true,
+				chosenVariantId: it.chosenVariantId
+			});
+			added++;
+		}
+
+		await touchList(activeId, tx);
+		return added;
+	});
+}
+
 interface DesiredItem {
 	ingredientId: string | null;
 	name: string;

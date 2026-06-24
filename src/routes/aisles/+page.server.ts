@@ -1,4 +1,4 @@
-import { redirect, fail } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { aisleCategories, ingredients } from '$lib/server/db/schema';
 import { eq, sql } from 'drizzle-orm';
@@ -6,7 +6,6 @@ import { generateId } from '$lib/utils/helpers';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.user) redirect(302, '/login');
 
 	const allAisles = await db
 		.select({
@@ -25,7 +24,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
 	createAisle: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const name = (data.get('name') as string)?.trim();
 		const nameHe = (data.get('nameHe') as string)?.trim();
@@ -42,7 +40,6 @@ export const actions: Actions = {
 	},
 
 	updateAisle: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const id = data.get('id') as string;
 		const name = (data.get('name') as string)?.trim();
@@ -55,7 +52,6 @@ export const actions: Actions = {
 	},
 
 	deleteAisle: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/login');
 		const data = await request.formData();
 		const id = data.get('id') as string;
 		if (!id) return fail(400);
